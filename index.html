@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1117" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Lift Tracker" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<title>Lift Tracker</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="app-header">
+  <h1>Lift Tracker</h1>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="workout">Workout</button>
+    <button class="tab-btn" data-tab="history">History</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-workout" class="tab-panel active">
+    <div id="start-screen">
+      <p class="empty-state">No workout in progress.</p>
+      <button id="warmup-btn" class="secondary-btn warmup-cta">Warm Up first (~10 min)</button>
+      <button id="start-workout-btn" class="primary-btn">Start Workout</button>
+    </div>
+
+    <div id="warmup-screen" class="hidden">
+      <div id="warmup-active">
+        <ul id="warmup-item-list" class="warmup-item-list"></ul>
+
+        <div class="warmup-current">
+          <p id="warmup-item-name" class="warmup-item-name"></p>
+          <p id="warmup-segment-label" class="warmup-segment-label"></p>
+          <p id="warmup-note" class="warmup-note"></p>
+
+          <div id="warmup-timer-display" class="warmup-timer-display">0:00</div>
+          <div class="warmup-progress-track">
+            <div id="warmup-progress-fill" class="warmup-progress-fill"></div>
+          </div>
+
+          <div class="warmup-controls">
+            <button id="warmup-pause-btn" class="secondary-btn">Pause</button>
+            <button id="warmup-skip-btn" class="secondary-btn">Skip</button>
+          </div>
+          <button id="warmup-skip-all-btn" class="text-btn">Skip warm-up entirely</button>
+        </div>
+      </div>
+
+      <div id="warmup-complete" class="hidden">
+        <p class="empty-state">Warm-up complete. Nice work.</p>
+        <button id="warmup-done-btn" class="primary-btn">Start Workout</button>
+      </div>
+    </div>
+
+    <div id="routine-screen" class="hidden">
+      <div id="routine-focus" class="focus-banner"></div>
+      <div id="exercise-list"></div>
+
+      <div class="chat-box">
+        <label for="chat-input">Ask / tell the tracker something</label>
+        <div class="chat-row">
+          <input id="chat-input" type="text" placeholder="e.g. log 3x10 at 135, or swap this exercise" autocomplete="off" />
+          <button id="chat-send-btn">Send</button>
+        </div>
+        <div id="chat-reply" class="chat-reply"></div>
+      </div>
+
+      <button id="finish-workout-btn" class="primary-btn">Finish Workout</button>
+    </div>
+  </section>
+
+  <section id="tab-history" class="tab-panel">
+    <div id="history-list"></div>
+  </section>
+</main>
+
+<script src="js/db.js"></script>
+<script src="js/store.js"></script>
+<script src="js/routine.js"></script>
+<script src="js/progression.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/formGuidance.js"></script>
+<script src="js/app.js"></script>
+<script src="js/warmup.js"></script>
+</body>
+</html>
