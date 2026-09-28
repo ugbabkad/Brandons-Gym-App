@@ -522,3 +522,50 @@ main {
 #warmup-complete .primary-btn {
   margin-top: 0;
 }
+
+/* ---- header sync status ---- */
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.sync-status {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.sync-status.saving { opacity: 0.7; }
+.sync-status.error { color: #ff6b6b; font-weight: 600; text-decoration: underline; }
+
+/* ---- sign-in ---- */
+.auth-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 10px;
+  padding: 12px;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--surface, #1a1d27);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.auth-msg {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+  min-height: 1.2em;
+}
+
+.history-notes {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-dim);
+}

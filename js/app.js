@@ -85,9 +85,11 @@ function buildExerciseCard(exercise) {
     const inputs = isBodyweight
       ? [row.querySelector(".reps-input")]
       : [row.querySelector(".weight-input"), row.querySelector(".reps-input")];
-    inputs.forEach((input) =>
-      input.addEventListener("focus", () => (lastFocusedExercise = exercise.name))
-    );
+    row.dataset.setNumber = String(i + 1);
+    inputs.forEach((input) => {
+      input.addEventListener("focus", () => (lastFocusedExercise = exercise.name));
+      input.addEventListener("change", () => syncRow(card, row));
+    });
     setsWrap.appendChild(row);
   }
   card.appendChild(setsWrap);
@@ -120,6 +122,7 @@ function swapExercise(name) {
     return;
   }
   currentRoutine[idx] = replacement;
+  Store.replaceExercise(exercise.name, replacement);
   renderExerciseList();
 }
 
@@ -138,6 +141,7 @@ function generateAndStoreRoutine() {
 // currentPrimaryGroups. Safe to call whether the user skipped the warm-up
 // or just finished it.
 function showRoutineScreen() {
+  if (!Store.getActive()) Store.beginSession(currentRoutine);
   renderFocusBanner(currentPrimaryGroups);
   renderExerciseList();
   el("start-screen").classList.add("hidden");
@@ -152,49 +156,79 @@ function startWorkout() {
   showRoutineScreen();
 }
 
-function collectSessionFromDom() {
-  const exercises = [];
+// Reads every exercise card on screen. Each set keeps its row number, so a
+// skipped row stays skipped instead of shifting later sets up.
+function collectRowsFromDom() {
+  const out = [];
   document.querySelectorAll("#exercise-list .exercise-card").forEach((card) => {
     const targetReps = card.dataset.targetReps === "" ? null : Number(card.dataset.targetReps);
     const isBodyweight = card.dataset.equipment === "bodyweight";
     const sets = [];
     card.querySelectorAll(".set-row").forEach((row) => {
+      const setNumber = Number(row.dataset.setNumber);
       const reps = row.querySelector(".reps-input").value;
       if (isBodyweight) {
-        if (reps !== "") sets.push({ reps: Number(reps) });
+        if (reps !== "") sets.push({ setNumber, reps: Number(reps) });
         return;
       }
       const weight = row.querySelector(".weight-input").value;
       if (weight !== "" && reps !== "") {
-        sets.push({ weight: Number(weight), reps: Number(reps) });
+        sets.push({ setNumber, weight: Number(weight), reps: Number(reps) });
       }
     });
-    if (sets.length) {
-      exercises.push({
-        name: card.dataset.exerciseName,
-        muscleGroup: card.dataset.muscleGroup,
-        targetReps,
-        sets,
-      });
-    }
+    out.push({
+      name: card.dataset.exerciseName,
+      muscleGroup: card.dataset.muscleGroup,
+      targetReps,
+      sets,
+    });
   });
-  return exercises;
+  return out;
 }
 
-function finishWorkout() {
-  const exercises = collectSessionFromDom();
-  if (!exercises.length) {
-    const proceed = confirm("No sets logged yet. Discard this workout anyway?");
-    if (proceed) resetToStartScreen();
+// Saves one set row to the cloud as soon as it is filled in (or clears it).
+function syncRow(card, row) {
+  const name = card.dataset.exerciseName;
+  const setNumber = Number(row.dataset.setNumber);
+  const reps = row.querySelector(".reps-input").value;
+  if (card.dataset.equipment === "bodyweight") {
+    Store.saveSet(name, setNumber, reps === "" ? null : { reps: Number(reps) });
     return;
   }
-  Store.saveSession({
-    id: `s_${Date.now()}`,
-    date: new Date().toISOString(),
-    exercises,
-  });
-  resetToStartScreen();
-  alert("Workout saved.");
+  const weight = row.querySelector(".weight-input").value;
+  Store.saveSet(
+    name,
+    setNumber,
+    weight !== "" && reps !== "" ? { weight: Number(weight), reps: Number(reps) } : null
+  );
+}
+
+async function finishWorkout() {
+  const rows = collectRowsFromDom();
+  if (!rows.some((r) => r.sets.length)) {
+    const proceed = confirm("No sets logged yet. Discard this workout anyway?");
+    if (proceed) {
+      Store.discardSession();
+      resetToStartScreen();
+    }
+    return;
+  }
+  const btn = el("finish-workout-btn");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  try {
+    await Store.finishSession(rows);
+    resetToStartScreen();
+    alert("Workout saved.");
+  } catch (e) {
+    console.error(e);
+    alert(
+      "Couldn't save your workout. Your sets are still on screen — check your connection and tap Finish Workout again."
+    );
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Finish Workout";
+  }
 }
 
 function resetToStartScreen() {
@@ -229,7 +263,8 @@ function renderHistory() {
         return `<p class="history-exercise"><strong>${ex.name}</strong>: ${setStr}</p>`;
       })
       .join("");
-    div.innerHTML = `<div class="history-session-date">${date}</div>${exLines}`;
+    const notesLine = session.notes ? `<p class="history-notes">${escapeHtml(session.notes)}</p>` : "";
+    div.innerHTML = `<div class="history-session-date">${date}</div>${exLines}${notesLine}`;
     list.appendChild(div);
   });
 }
@@ -267,6 +302,7 @@ function applyLoggedCommand(result) {
       const weightInput = row.querySelector(".weight-input");
       if (weightInput) weightInput.value = result.weight;
       row.querySelector(".reps-input").value = result.reps;
+      syncRow(card, row);
     }
   });
 }
@@ -277,9 +313,122 @@ function registerServiceWorker() {
   }
 }
 
+function escapeHtml(text) {
+  const d = document.createElement("div");
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+function renderSyncStatus(status) {
+  const b = el("sync-status");
+  if (!b) return;
+  b.className = `sync-status ${status}`;
+  b.textContent =
+    status === "saving" ? "Saving…" : status === "error" ? "Not saved — tap to retry" : "Saved \u2713";
+}
+
+function showAuth(message) {
+  el("auth-screen").classList.remove("hidden");
+  el("loading-screen").classList.add("hidden");
+  el("start-screen").classList.add("hidden");
+  el("routine-screen").classList.add("hidden");
+  if (message) el("auth-msg").textContent = message;
+}
+
+async function handleAuth(mode) {
+  const email = el("auth-email").value.trim();
+  const password = el("auth-password").value;
+  if (!email || password.length < 6) {
+    el("auth-msg").textContent = "Enter your email and a password (6+ characters).";
+    return;
+  }
+  el("auth-msg").textContent = mode === "signup" ? "Creating account…" : "Signing in…";
+  try {
+    const session = mode === "signup" ? await Cloud.signUp(email, password) : await Cloud.signIn(email, password);
+    if (!session) {
+      el("auth-msg").textContent = "Account created. Confirm it from the email we sent, then sign in here.";
+      return;
+    }
+    el("auth-screen").classList.add("hidden");
+    await bootApp();
+  } catch (e) {
+    el("auth-msg").textContent = e.message || "Sign-in failed.";
+  }
+}
+
+// Re-opens an unfinished workout (saved set-by-set) exactly where it was left.
+function resumeActiveWorkout() {
+  const active = Store.getActive();
+  if (!active) return false;
+  currentRoutine = active.exercises.map(
+    (e) =>
+      EXERCISE_DB.find((x) => x.name === e.name) || {
+        name: e.name,
+        muscleGroup: e.muscleGroup,
+        equipment: e.equipment || "machine",
+        type: "isolation",
+      }
+  );
+  const recency = Store.getMuscleGroupRecency();
+  currentPrimaryGroups = [...new Set(currentRoutine.map((e) => e.muscleGroup))].map((key) => ({
+    label: muscleLabel(key),
+    daysSince: recency[key] ? recency[key].daysSince : null,
+  }));
+  showRoutineScreen();
+  active.exercises.forEach((e) => {
+    const card = document.querySelector(
+      `#exercise-list .exercise-card[data-exercise-name="${CSS.escape(e.name)}"]`
+    );
+    if (!card) return;
+    e.sets.forEach((s) => {
+      const row = card.querySelector(`.set-row[data-set-number="${s.setNumber}"]`);
+      if (!row) return;
+      const w = row.querySelector(".weight-input");
+      if (w && s.weight !== null) w.value = s.weight;
+      row.querySelector(".reps-input").value = s.reps;
+    });
+  });
+  el("chat-reply").textContent = "Picked up the workout you had in progress.";
+  return true;
+}
+
+async function bootApp() {
+  el("loading-screen").classList.remove("hidden");
+  el("load-msg").textContent = "Loading your history…";
+  el("load-retry-btn").classList.add("hidden");
+  el("start-screen").classList.add("hidden");
+  try {
+    const moved = await Store.migrateLegacy();
+    await Store.init();
+    if (moved) alert(`Moved ${moved} earlier workout${moved === 1 ? "" : "s"} from this phone into your cloud history.`);
+  } catch (e) {
+    console.error(e);
+    el("load-msg").textContent = "Couldn't load your history. Check your connection and try again.";
+    el("load-retry-btn").classList.remove("hidden");
+    return;
+  }
+  el("loading-screen").classList.add("hidden");
+  if (!resumeActiveWorkout()) el("start-screen").classList.remove("hidden");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   registerServiceWorker();
+  Cloud.init();
+  Store.onStatus = renderSyncStatus;
+  window.addEventListener("online", () => Store.retryFailed());
+  el("sync-status").addEventListener("click", () => Store.retryFailed());
+  el("auth-signin-btn").addEventListener("click", () => handleAuth("signin"));
+  el("auth-signup-btn").addEventListener("click", () => handleAuth("signup"));
+  el("auth-password").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") handleAuth("signin");
+  });
+  el("load-retry-btn").addEventListener("click", bootApp);
+  el("signout-btn").addEventListener("click", async () => {
+    await Cloud.signOut();
+    location.reload();
+  });
+  Cloud.getSession().then((session) => (session ? bootApp() : showAuth()));
   el("start-workout-btn").addEventListener("click", startWorkout);
   if (el("warmup-btn")) el("warmup-btn").addEventListener("click", startWarmup);
   el("finish-workout-btn").addEventListener("click", finishWorkout);

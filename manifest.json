@@ -1,7 +1,7 @@
 {
-  "name": "Lift Tracker",
-  "short_name": "Lift Tracker",
-  "description": "Local-first weightlifting tracker with auto-varying routines and progression suggestions.",
+  "name": "Brandons Gym App",
+  "short_name": "Gym App",
+  "description": "Weightlifting tracker with auto-varying routines and progression suggestions. Workouts are saved to the cloud.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

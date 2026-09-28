@@ -6,15 +6,18 @@
 <meta name="theme-color" content="#0f1117" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Lift Tracker" />
+<meta name="apple-mobile-web-app-title" content="Gym App" />
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-<title>Lift Tracker</title>
+<title>Brandons Gym App</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <header class="app-header">
-  <h1>Lift Tracker</h1>
+  <div class="header-row">
+    <h1>Brandons Gym App</h1>
+    <button id="sync-status" class="sync-status saved" type="button"></button>
+  </div>
   <nav class="tabs">
     <button class="tab-btn active" data-tab="workout">Workout</button>
     <button class="tab-btn" data-tab="history">History</button>
@@ -23,7 +26,21 @@
 
 <main>
   <section id="tab-workout" class="tab-panel active">
-    <div id="start-screen">
+    <div id="auth-screen" class="hidden">
+      <p class="empty-state">Sign in to see and save your workouts.</p>
+      <input id="auth-email" class="auth-input" type="email" placeholder="Email" autocomplete="username" autocapitalize="none" />
+      <input id="auth-password" class="auth-input" type="password" placeholder="Password" autocomplete="current-password" />
+      <button id="auth-signin-btn" class="primary-btn">Sign in</button>
+      <button id="auth-signup-btn" class="text-btn">First time? Create your account</button>
+      <p id="auth-msg" class="auth-msg"></p>
+    </div>
+
+    <div id="loading-screen">
+      <p id="load-msg" class="empty-state">Loading…</p>
+      <button id="load-retry-btn" class="secondary-btn hidden">Try again</button>
+    </div>
+
+    <div id="start-screen" class="hidden">
       <p class="empty-state">No workout in progress.</p>
       <button id="warmup-btn" class="secondary-btn warmup-cta">Warm Up first (~10 min)</button>
       <button id="start-workout-btn" class="primary-btn">Start Workout</button>
@@ -76,9 +93,12 @@
 
   <section id="tab-history" class="tab-panel">
     <div id="history-list"></div>
+    <button id="signout-btn" class="text-btn">Sign out</button>
   </section>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/cloud.js"></script>
 <script src="js/db.js"></script>
 <script src="js/store.js"></script>
 <script src="js/routine.js"></script>

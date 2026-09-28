@@ -16,11 +16,17 @@ const DEFAULTS_BY_TYPE = {
 // every session after that progresses by adding a rep.
 const BODYWEIGHT_DEFAULTS = { sets: 3, incrementReps: 1 };
 
+// Kettlebells come in fixed sizes (roughly 18/26/35/44/53 lb), so a +5 lb
+// suggestion isn't loadable. Suggest the next bell size up instead.
+const KETTLEBELL_INCREMENT_LBS = 9;
+
 function suggestNext(exercise) {
   if (exercise.equipment === "bodyweight") return suggestNextBodyweight(exercise);
 
   const defaults = DEFAULTS_BY_TYPE[exercise.type] || DEFAULTS_BY_TYPE.isolation;
   const last = Store.getLastForExercise(exercise.name);
+  const incrementLbs =
+    exercise.equipment === "kettlebell" ? KETTLEBELL_INCREMENT_LBS : defaults.incrementLbs;
 
   if (!last || !last.sets || !last.sets.length) {
     return {
@@ -42,12 +48,27 @@ function suggestNext(exercise) {
       Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0]
     ) || last.sets[last.sets.length - 1].weight;
 
-  if (hitAll) {
+  if (hitAll && exercise.weightMeaning === "assistance") {
+    // Assisted machine: the weight is help from the machine, so progress = less help.
+    const next = Math.max(lastWeight - incrementLbs, 0);
     return {
-      weight: lastWeight + defaults.incrementLbs,
+      weight: next,
       sets: last.sets.length,
       targetReps,
-      note: `Hit all ${targetReps} reps last time — try +${defaults.incrementLbs} lbs.`,
+      note:
+        next === lastWeight
+          ? `Hit all ${targetReps} reps with no assistance — try the unassisted version.`
+          : `Hit all ${targetReps} reps last time — try ${incrementLbs} lbs LESS assistance.`,
+      isFirstTime: false,
+    };
+  }
+
+  if (hitAll) {
+    return {
+      weight: lastWeight + incrementLbs,
+      sets: last.sets.length,
+      targetReps,
+      note: `Hit all ${targetReps} reps last time — try +${incrementLbs} lbs.`,
       isFirstTime: false,
     };
   }

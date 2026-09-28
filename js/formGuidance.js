@@ -92,7 +92,7 @@ function limbGroup(paths, circles, color) {
     paths.map((d) => `<path d="${d}" ${attrs}/>`).join("") +
     circles.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" ${attrs}/>`).join("");
   return (
-    `<g>${shapes(`fill="${OUTLINE}" stroke="${OUTLINE}" stroke-width="3" stroke-linejoin="round"`)}` +
+    `<g>${shapes(`fill="${OUTLINE}" stroke="${OUTLINE}" stroke-width="4" stroke-linejoin="round"`)}` +
     `${shapes(`fill="${color}"`)}</g>`
   );
 }
@@ -140,7 +140,7 @@ function renderBody(pose, color) {
     if (!isFront || !isRoot(name) || !m) return j[name];
     const sign = m[1] === "L" ? -1 : 1;
     return name === "shoulder"
-      ? [j[name][0] + sign * 7.5, j[name][1] + 2]
+      ? [j[name][0] + sign * 14.5, j[name][1] + 4]
       : [j[name][0] + sign * 4.5, j[name][1]];
   };
 
@@ -191,6 +191,10 @@ function renderPose(pose, color) {
     ? `<circle cx="${pose.plate[0]}" cy="${pose.plate[1]}" r="7" fill="#9297a8" stroke="${OUTLINE}" stroke-width="2"/>` +
       `<circle cx="${pose.plate[0]}" cy="${pose.plate[1]}" r="2" fill="${OUTLINE}"/>`
     : "";
+  // Arbitrary pad/box segments (incline bench, preacher pad, step box...): [x1,y1,x2,y2].
+  const pads = (pose.pads || [])
+    .map(([x1, y1, x2, y2]) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#3a3f55" stroke-width="7" stroke-linecap="round"/>`)
+    .join("");
   const plateV = pose.plateV
     ? `<line x1="${pose.plateV[0]}" y1="${pose.plateV[1]}" x2="${pose.plateV[0]}" y2="${pose.plateV[2]}" stroke="#3a3f55" stroke-width="7" stroke-linecap="round"/>`
     : "";
@@ -221,7 +225,7 @@ function renderPose(pose, color) {
   }
 
   const body = renderBody(pose, color);
-  return `<svg viewBox="${VIEWBOX}">${ground}${bench}${ghostSvg}${plateV}${body}${bar}${plate}${ghostLabel}</svg>`;
+  return `<svg viewBox="${VIEWBOX}">${ground}${bench}${pads}${ghostSvg}${plateV}${body}${bar}${plate}${ghostLabel}</svg>`;
 }
 
 function renderFrame(frame, index) {
@@ -510,7 +514,7 @@ const POSE_FAMILIES = {
         label: "Arms at sides",
         pose: {
           head: [60, 42], ground: 158,
-          joints: { shoulder: [60, 55], elbowL: [44, 78], handL: [41, 100], elbowR: [76, 78], handR: [79, 100],
+          joints: { shoulder: [60, 55], elbowL: [38, 78], handL: [33, 100], elbowR: [82, 78], handR: [87, 100],
                     hip: [60, 100], kneeL: [56, 130], footL: [54, 158], kneeR: [64, 130], footR: [66, 158] },
           bones: [["shoulder","elbowL"],["elbowL","handL"],["shoulder","elbowR"],["elbowR","handR"],
                    ["shoulder","hip"],["hip","kneeL"],["kneeL","footL"],["hip","kneeR"],["kneeR","footR"]],
@@ -797,7 +801,7 @@ const POSE_FAMILIES = {
         label: "Arms extended",
         pose: {
           head: [60, 42], ground: 158,
-          joints: { shoulder: [60, 55], elbowL: [43, 80], handL: [40, 104], elbowR: [77, 80], handR: [80, 104],
+          joints: { shoulder: [60, 55], elbowL: [38, 80], handL: [34, 103], elbowR: [82, 80], handR: [86, 103],
                     hip: [60, 100], kneeL: [56, 130], footL: [54, 158], kneeR: [64, 130], footR: [66, 158] },
           bones: [["shoulder","elbowL"],["elbowL","handL"],["shoulder","elbowR"],["elbowR","handR"],
                    ["shoulder","hip"],["hip","kneeL"],["kneeL","footL"],["hip","kneeR"],["kneeR","footR"]],
@@ -809,13 +813,13 @@ const POSE_FAMILIES = {
         checkpoint: true,
         pose: {
           head: [60, 42], ground: 158,
-          joints: { shoulder: [60, 55], elbowL: [43, 80], handL: [38, 57], elbowR: [77, 80], handR: [82, 57],
+          joints: { shoulder: [60, 55], elbowL: [38, 80], handL: [31, 57], elbowR: [82, 80], handR: [89, 57],
                     hip: [60, 100], kneeL: [56, 130], footL: [54, 158], kneeR: [64, 130], footR: [66, 158] },
           bones: [["shoulder","elbowL"],["elbowL","handL"],["shoulder","elbowR"],["elbowR","handR"],
                    ["shoulder","hip"],["hip","kneeL"],["kneeL","footL"],["hip","kneeR"],["kneeR","footR"]],
           dots: ["shoulder","elbowL","elbowR","hip","kneeL","kneeR"],
           ghost: {
-            joints: { elbowBase: [48, 80], elbowG: [32, 63] },
+            joints: { elbowBase: [38, 80], elbowG: [24, 62] },
             bones: [["elbowBase","elbowG"]],
             label: "avoid: swinging your elbows", labelPos: [4, 60],
           },
@@ -891,7 +895,7 @@ const POSE_FAMILIES = {
         label: "Extended overhead",
         pose: {
           head: [60, 38], ground: 155,
-          joints: { shoulder: [60, 50], elbowL: [46, 32], handL: [44, 12], elbowR: [74, 32], handR: [76, 12],
+          joints: { shoulder: [60, 50], elbowL: [41, 30], handL: [38, 10], elbowR: [79, 30], handR: [82, 10],
                     hip: [60, 95], kneeL: [56, 125], footL: [54, 155], kneeR: [64, 125], footR: [66, 155] },
           bones: [["shoulder","elbowL"],["elbowL","handL"],["shoulder","elbowR"],["elbowR","handR"],
                    ["shoulder","hip"],["hip","kneeL"],["kneeL","footL"],["hip","kneeR"],["kneeR","footR"]],
@@ -903,13 +907,13 @@ const POSE_FAMILIES = {
         checkpoint: true,
         pose: {
           head: [60, 38], ground: 155,
-          joints: { shoulder: [60, 50], elbowL: [46, 32], handL: [42, 58], elbowR: [74, 32], handR: [78, 58],
+          joints: { shoulder: [60, 50], elbowL: [41, 30], handL: [35, 55], elbowR: [79, 30], handR: [85, 55],
                     hip: [60, 95], kneeL: [56, 125], footL: [54, 155], kneeR: [64, 125], footR: [66, 155] },
           bones: [["shoulder","elbowL"],["elbowL","handL"],["shoulder","elbowR"],["elbowR","handR"],
                    ["shoulder","hip"],["hip","kneeL"],["kneeL","footL"],["hip","kneeR"],["kneeR","footR"]],
           dots: ["shoulder","elbowL","elbowR","hip","kneeL","kneeR"],
           ghost: {
-            joints: { elbowBase: [50, 35], elbowG: [22, 42] },
+            joints: { elbowBase: [41, 30], elbowG: [16, 40] },
             bones: [["elbowBase","elbowG"]],
             label: "avoid: elbows flaring out", labelPos: [2, 38],
           },
@@ -1077,6 +1081,926 @@ const POSE_FAMILIES = {
           joints: { shoulder: [38, 90], hip: [40, 100], knee: [65, 105], ankle: [70, 130], toe: [80, 150] },
           bones: [["shoulder","hip"],["hip","knee"],["knee","ankle"],["ankle","toe"]],
           dots: ["hip","knee","ankle"],
+        },
+      },
+    ],
+  },
+
+  // ---- Added with the exercise-library expansion (bodyweight / kettlebell / gym staples)
+  pushUpSide: {
+    frames: [
+      {
+        label: "Top — straight line, head to heels",
+        pose: {
+          head: [19, 92],
+          ground: 141,
+          joints: {shoulder:[32, 98], hand:[32, 140], hip:[66, 114], ankle:[100, 133], toe:[107, 140]},
+          bones: [["shoulder", "hand"], ["shoulder", "hip"], ["hip", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "hip"],
+        },
+      },
+      {
+        label: "Bottom — chest a fist from the floor",
+        checkpoint: true,
+        pose: {
+          head: [19, 120],
+          ground: 141,
+          joints: {shoulder:[32, 125], elbow:[51, 118], hand:[34, 140], hip:[66, 131], ankle:[100, 137], toe:[107, 141]},
+          bones: [["shoulder", "elbow"], ["elbow", "hand"], ["shoulder", "hip"], ["hip", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "elbow", "hip"],
+          ghost: {
+            joints: {hipBase:[66, 131], hipG:[64, 106]},
+            bones: [["hipBase", "hipG"]],
+            label: "avoid: hips piking", labelPos: [38, 100],
+          },
+        },
+      },
+    ],
+  },
+
+  pikePushUpSide: {
+    frames: [
+      {
+        label: "Start — hips high, inverted V",
+        pose: {
+          head: [36, 112],
+          ground: 145,
+          joints: {shoulder:[44, 100], hand:[34, 143], hip:[80, 68], ankle:[108, 141], toe:[115, 144]},
+          bones: [["shoulder", "hand"], ["shoulder", "hip"], ["hip", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "hip"],
+        },
+      },
+      {
+        label: "Bottom — head between hands",
+        checkpoint: true,
+        pose: {
+          head: [38, 131],
+          ground: 145,
+          joints: {shoulder:[46, 118], elbow:[57, 128], hand:[36, 143], hip:[78, 76], ankle:[108, 141], toe:[115, 144]},
+          bones: [["shoulder", "elbow"], ["elbow", "hand"], ["shoulder", "hip"], ["hip", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "elbow", "hip"],
+          ghost: {
+            joints: {hipBase:[78, 76], hipG:[78, 104]},
+            bones: [["hipBase", "hipG"]],
+            label: "avoid: hips dropping", labelPos: [29, 112],
+          },
+        },
+      },
+    ],
+  },
+
+  invertedRowSide: {
+    frames: [
+      {
+        label: "Start — arms straight, body flat",
+        pose: {
+          head: [28, 124],
+          ground: 145,
+          plate: [42, 85],
+          joints: {shoulder:[42, 120], hand:[42, 85], hip:[76, 131], ankle:[108, 141], toe:[113, 145]},
+          bones: [["shoulder", "hand"], ["shoulder", "hip"], ["hip", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "hip"],
+        },
+      },
+      {
+        label: "Chest to bar — body stays straight",
+        checkpoint: true,
+        pose: {
+          head: [30, 100],
+          ground: 145,
+          plate: [42, 85],
+          joints: {shoulder:[44, 102], elbow:[58, 97], hand:[42, 85], hip:[76, 122], ankle:[108, 141], toe:[113, 145]},
+          bones: [["shoulder", "elbow"], ["elbow", "hand"], ["shoulder", "hip"], ["hip", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "elbow", "hip"],
+          ghost: {
+            joints: {hipBase:[76, 122], hipG:[76, 138]},
+            bones: [["hipBase", "hipG"]],
+            label: "avoid: hips sagging", labelPos: [33, 152],
+          },
+        },
+      },
+    ],
+  },
+
+  chestSupportedRowSide: {
+    frames: [
+      {
+        label: "Start — chest on pad, arms hanging",
+        pose: {
+          head: [82, 82],
+          ground: 150,
+          pads: [[40, 148, 68, 113]],
+          joints: {ankle:[36, 150], knee:[37, 136], hip:[44, 124], shoulder:[72, 92], hand:[82, 138]},
+          bones: [["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Row — elbows up past torso",
+        checkpoint: true,
+        pose: {
+          head: [82, 82],
+          ground: 150,
+          pads: [[40, 148, 68, 113]],
+          joints: {ankle:[36, 150], knee:[37, 136], hip:[44, 124], shoulder:[72, 92], elbow:[60, 98], hand:[72, 120]},
+          bones: [["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+          ghost: {
+            joints: {shoulder:[72, 92], shoulderG:[62, 78]},
+            bones: [["shoulder", "shoulderG"]],
+            head: [72, 68],
+            label: "avoid: chest peeling off", labelPos: [11, 60],
+          },
+        },
+      },
+    ],
+  },
+
+  straightArmPulldownSide: {
+    frames: [
+      {
+        label: "Start — arms straight, up and forward",
+        pose: {
+          head: [70, 46],
+          ground: 150,
+          plate: [92, 38],
+          joints: {ankle:[52, 150], knee:[53, 118], hip:[52, 92], shoulder:[64, 60], hand:[92, 38]},
+          bones: [["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Sweep to thighs — arms stay straight",
+        checkpoint: true,
+        pose: {
+          head: [70, 46],
+          ground: 150,
+          plate: [68, 98],
+          joints: {ankle:[52, 150], knee:[53, 118], hip:[52, 92], shoulder:[64, 60], hand:[68, 98]},
+          bones: [["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {shoulder:[64, 60], elbowG:[88, 80], handG:[68, 98]},
+            bones: [["shoulder", "elbowG"], ["elbowG", "handG"]],
+            label: "avoid: bending elbows", labelPos: [25, 116],
+          },
+        },
+      },
+    ],
+  },
+
+  backExtensionSide: {
+    frames: [
+      {
+        label: "Bottom — hinged, back flat",
+        pose: {
+          head: [70, 144],
+          pads: [[47, 94, 60, 107]],
+          joints: {ankle:[20, 134], hip:[52, 100], shoulder:[64, 132]},
+          bones: [["ankle", "hip"], ["hip", "shoulder"]],
+          dots: ["shoulder", "hip"],
+        },
+      },
+      {
+        label: "Top — straight line, head to heels",
+        checkpoint: true,
+        pose: {
+          head: [87, 66],
+          pads: [[47, 94, 60, 107]],
+          joints: {ankle:[20, 134], hip:[52, 100], shoulder:[76, 76]},
+          bones: [["ankle", "hip"], ["hip", "shoulder"]],
+          dots: ["shoulder", "hip"],
+          ghost: {
+            joints: {},
+            curve: "M56,98 Q86,80 84,56",
+            head: [86, 48],
+            label: "avoid: arching past straight", labelPos: [2, 40],
+          },
+        },
+      },
+    ],
+  },
+
+  reversePecDeckFront: {
+    frames: [
+      {
+        label: "Start — arms forward, hands together",
+        pose: {
+          head: [60, 36],
+          bench: [35, 100, 85],
+          joints: {shoulder:[60, 50], handL:[50, 70], handR:[70, 70], hip:[60, 98], kneeL:[50, 120], footL:[48, 150], kneeR:[70, 120], footR:[72, 150]},
+          bones: [["shoulder", "handL"], ["shoulder", "handR"], ["shoulder", "hip"], ["hip", "kneeL"], ["kneeL", "footL"], ["hip", "kneeR"], ["kneeR", "footR"]],
+          dots: ["shoulder", "hip", "kneeL", "kneeR"],
+        },
+      },
+      {
+        label: "Sweep out — squeeze shoulder blades",
+        checkpoint: true,
+        pose: {
+          head: [60, 36],
+          bench: [35, 100, 85],
+          joints: {shoulder:[60, 50], handL:[14, 55], handR:[106, 55], hip:[60, 98], kneeL:[50, 120], footL:[48, 150], kneeR:[70, 120], footR:[72, 150]},
+          bones: [["shoulder", "handL"], ["shoulder", "handR"], ["shoulder", "hip"], ["hip", "kneeL"], ["kneeL", "footL"], ["hip", "kneeR"], ["kneeR", "footR"]],
+          dots: ["shoulder", "hip", "kneeL", "kneeR"],
+          ghost: {
+            joints: {},
+            head: [60, 26],
+            label: "avoid: shrugging up", labelPos: [33, 20],
+          },
+        },
+      },
+    ],
+  },
+
+  frontRaiseSide: {
+    frames: [
+      {
+        label: "Start — weights at thighs",
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          plate: [66, 82],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], hand:[66, 82]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Raise to shoulder height",
+        checkpoint: true,
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          plate: [92, 46],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], hand:[92, 46]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {},
+            curve: "M57,76 Q46,60 42,44",
+            head: [42, 36],
+            label: "avoid: leaning back", labelPos: [2, 26],
+          },
+        },
+      },
+    ],
+  },
+
+  lungeSide: {
+    frames: [
+      {
+        label: "Standing tall",
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          joints: {ankle:[56, 150], toe:[72, 152], knee:[56, 113], hip:[57, 76], shoulder:[58, 42]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Bottom — both knees about 90°",
+        checkpoint: true,
+        pose: {
+          head: [55, 58],
+          ground: 150,
+          joints: {shoulder:[55, 70], hip:[55, 108], frontKnee:[86, 113], frontAnkle:[88, 150], rearKnee:[32, 142], rearFoot:[8, 130]},
+          bones: [["hip", "shoulder"], ["hip", "frontKnee"], ["frontKnee", "frontAnkle"], ["hip", "rearKnee"], ["rearKnee", "rearFoot"]],
+          dots: ["shoulder", "hip", "frontKnee", "rearKnee"],
+          ghost: {
+            joints: {hip:[55, 108], shoulderG:[78, 76]},
+            bones: [["hip", "shoulderG"]],
+            head: [86, 68],
+            label: "avoid: torso pitching", labelPos: [4, 44],
+          },
+        },
+      },
+    ],
+  },
+
+  stepUpSide: {
+    frames: [
+      {
+        label: "Start — foot planted on the box",
+        pose: {
+          head: [58, 44],
+          ground: 150,
+          bench: [70, 114, 108],
+          pads: [[74, 118, 74, 148], [104, 118, 104, 148]],
+          joints: {shoulder:[58, 56], hip:[58, 90], frontKnee:[80, 100], frontAnkle:[88, 112], rearKnee:[56, 120], rearAnkle:[56, 150]},
+          bones: [["hip", "shoulder"], ["hip", "frontKnee"], ["frontKnee", "frontAnkle"], ["hip", "rearKnee"], ["rearKnee", "rearAnkle"]],
+          dots: ["shoulder", "hip", "frontKnee", "rearKnee"],
+        },
+      },
+      {
+        label: "Top — stand tall, back leg hangs",
+        checkpoint: true,
+        pose: {
+          head: [86, 10],
+          ground: 150,
+          bench: [70, 114, 108],
+          pads: [[74, 118, 74, 148], [104, 118, 104, 148]],
+          joints: {shoulder:[86, 22], hip:[86, 56], frontKnee:[88, 84], frontAnkle:[88, 112], rearKnee:[76, 76], rearAnkle:[68, 102]},
+          bones: [["hip", "shoulder"], ["hip", "frontKnee"], ["frontKnee", "frontAnkle"], ["hip", "rearKnee"], ["rearKnee", "rearAnkle"]],
+          dots: ["shoulder", "hip", "frontKnee", "rearKnee"],
+          ghost: {
+            joints: {rearAnkle:[68, 102], rearG:[56, 148]},
+            bones: [["rearAnkle", "rearG"]],
+            label: "avoid: push off back foot", labelPos: [2, 24],
+          },
+        },
+      },
+    ],
+  },
+
+  hackSquatSide: {
+    frames: [
+      {
+        label: "Top — legs extended",
+        pose: {
+          head: [62, 54],
+          ground: 150,
+          pads: [[26, 140, 52, 60]],
+          joints: {shoulder:[57, 66], hip:[50, 104], knee:[60, 127], ankle:[66, 150], toe:[84, 152]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Bottom — thighs near parallel",
+        checkpoint: true,
+        pose: {
+          head: [58, 74],
+          ground: 150,
+          pads: [[26, 140, 52, 60]],
+          joints: {shoulder:[54, 86], hip:[46, 124], knee:[82, 120], ankle:[76, 150], toe:[94, 152]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {ankle:[76, 150], toeG:[76, 136]},
+            bones: [["ankle", "toeG"]],
+            label: "avoid: heels lifting", labelPos: [2, 24],
+          },
+        },
+      },
+    ],
+  },
+
+  seatedLegCurlSide: {
+    frames: [
+      {
+        label: "Start — legs extended, thighs pinned",
+        pose: {
+          head: [40, 54],
+          bench: [24, 110, 56],
+          joints: {shoulder:[40, 66], hip:[42, 104], knee:[80, 104], ankle:[112, 112]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Curl — heels drive back under the seat",
+        checkpoint: true,
+        pose: {
+          head: [40, 54],
+          bench: [24, 110, 56],
+          joints: {shoulder:[40, 66], hip:[42, 104], knee:[80, 104], ankle:[64, 140]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {hipBase:[42, 104], hipG:[42, 88]},
+            bones: [["hipBase", "hipG"]],
+            label: "avoid: hips lifting", labelPos: [2, 30],
+          },
+        },
+      },
+    ],
+  },
+
+  singleLegRdlSide: {
+    frames: [
+      {
+        label: "Start — standing tall on one leg",
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          plate: [66, 84],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[56, 113], hip:[57, 76], shoulder:[58, 42], hand:[66, 84]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Hinge — free leg reaches back",
+        checkpoint: true,
+        pose: {
+          head: [108, 76],
+          ground: 150,
+          plate: [92, 120],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[57, 118], hip:[60, 84], shoulder:[96, 80], hand:[92, 120], rearKnee:[40, 86], rearFoot:[20, 88]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"], ["hip", "rearKnee"], ["rearKnee", "rearFoot"]],
+          dots: ["shoulder", "hip", "knee", "rearKnee"],
+          ghost: {
+            joints: {},
+            curve: "M60,84 Q84,52 100,72",
+            label: "avoid: rounding back", labelPos: [29, 44],
+          },
+        },
+      },
+    ],
+  },
+
+  nordicCurlSide: {
+    frames: [
+      {
+        label: "Start — kneeling upright",
+        pose: {
+          head: [48, 60],
+          ground: 150,
+          pads: [[34, 153, 54, 153], [10, 138, 26, 138]],
+          joints: {ankle:[20, 146], knee:[44, 148], hip:[46, 110], shoulder:[48, 74]},
+          bones: [["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Lower slowly — body stays straight",
+        checkpoint: true,
+        pose: {
+          head: [112, 116],
+          ground: 150,
+          pads: [[34, 153, 54, 153], [10, 138, 26, 138]],
+          joints: {ankle:[20, 146], knee:[44, 148], hip:[70, 136], shoulder:[100, 124], hand:[106, 148]},
+          bones: [["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {},
+            curve: "M70,136 Q84,96 100,116",
+            label: "avoid: folding at hips", labelPos: [2, 84],
+          },
+        },
+      },
+    ],
+  },
+
+  kbCleanPressSide: {
+    frames: [
+      {
+        label: "Start — hinge, bell hangs between knees",
+        pose: {
+          head: [102, 56],
+          ground: 150,
+          plate: [88, 106],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[62, 118], hip:[68, 92], shoulder:[92, 66], hand:[88, 106]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Rack — bell at shoulder, elbow tucked",
+        checkpoint: true,
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          plate: [66, 46],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], elbow:[66, 62], hand:[66, 46]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+        },
+      },
+      {
+        label: "Press — arm locked out overhead",
+        pose: {
+          head: [56, 30],
+          ground: 150,
+          plate: [62, 6],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], hand:[62, 6]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+    ],
+  },
+
+  kbHaloSide: {
+    frames: [
+      {
+        label: "Start — bell at chin, ribs down",
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          plate: [68, 48],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], elbow:[66, 62], hand:[68, 48]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+        },
+      },
+      {
+        label: "Circle over the head",
+        checkpoint: true,
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          plate: [56, 10],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], elbow:[72, 32], hand:[58, 12]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+        },
+      },
+      {
+        label: "Behind the head — ribs stay down",
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          plate: [42, 36],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], elbow:[48, 58], hand:[42, 38]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+          ghost: {
+            joints: {hip:[57, 76], shoulderG:[70, 44]},
+            bones: [["hip", "shoulderG"]],
+            label: "avoid: arching back", labelPos: [2, 22],
+          },
+        },
+      },
+    ],
+  },
+
+  preacherCurlSide: {
+    frames: [
+      {
+        label: "Start — arm nearly straight on the pad",
+        pose: {
+          head: [46, 58],
+          ground: 150,
+          bench: [26, 120, 54],
+          pads: [[60, 74, 78, 106]],
+          plate: [86, 116],
+          joints: {shoulder:[44, 72], hip:[42, 112], knee:[70, 120], ankle:[72, 150], elbow:[70, 90], hand:[86, 116]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+        },
+      },
+      {
+        label: "Curl up — elbow stays on the pad",
+        checkpoint: true,
+        pose: {
+          head: [46, 58],
+          ground: 150,
+          bench: [26, 120, 54],
+          pads: [[60, 74, 78, 106]],
+          plate: [62, 64],
+          joints: {shoulder:[44, 72], hip:[42, 112], knee:[70, 120], ankle:[72, 150], elbow:[70, 90], hand:[62, 66]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+          ghost: {
+            joints: {elbow:[70, 90], elbowG:[68, 72]},
+            bones: [["elbow", "elbowG"]],
+            label: "avoid: elbow lifting", labelPos: [2, 30],
+          },
+        },
+      },
+    ],
+  },
+
+  inclineCurlSide: {
+    frames: [
+      {
+        label: "Start — arm hangs straight down",
+        pose: {
+          head: [60, 60],
+          ground: 150,
+          pads: [[30, 122, 46, 64], [24, 124, 46, 124]],
+          plate: [62, 116],
+          joints: {shoulder:[54, 74], hip:[42, 108], knee:[76, 112], ankle:[78, 150], hand:[62, 114]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Curl — elbow stays back",
+        checkpoint: true,
+        pose: {
+          head: [60, 60],
+          ground: 150,
+          pads: [[30, 122, 46, 64], [24, 124, 46, 124]],
+          plate: [74, 74],
+          joints: {shoulder:[54, 74], hip:[42, 108], knee:[76, 112], ankle:[78, 150], elbow:[58, 96], hand:[74, 76]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+          ghost: {
+            joints: {elbow:[58, 96], elbowG:[76, 90]},
+            bones: [["elbow", "elbowG"]],
+            label: "avoid: elbow drifting", labelPos: [2, 30],
+          },
+        },
+      },
+    ],
+  },
+
+  concentrationCurlSide: {
+    frames: [
+      {
+        label: "Start — elbow braced on inner thigh",
+        pose: {
+          head: [70, 64],
+          ground: 150,
+          bench: [26, 120, 56],
+          plate: [84, 130],
+          joints: {shoulder:[62, 76], hip:[44, 112], knee:[84, 110], ankle:[86, 150], elbow:[76, 101], hand:[84, 128]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+        },
+      },
+      {
+        label: "Curl up — squeeze at the top",
+        checkpoint: true,
+        pose: {
+          head: [70, 64],
+          ground: 150,
+          bench: [26, 120, 56],
+          plate: [72, 76],
+          joints: {shoulder:[62, 76], hip:[44, 112], knee:[84, 110], ankle:[86, 150], elbow:[76, 101], hand:[72, 78]},
+          bones: [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+          ghost: {
+            joints: {hip:[44, 112], shoulderG:[50, 62]},
+            bones: [["hip", "shoulderG"]],
+            head: [48, 52],
+            label: "avoid: swinging torso", labelPos: [2, 24],
+          },
+        },
+      },
+    ],
+  },
+
+  kickbackSide: {
+    frames: [
+      {
+        label: "Start — upper arm parallel to floor",
+        pose: {
+          head: [92, 86],
+          ground: 150,
+          plate: [52, 124],
+          joints: {ankle:[42, 150], knee:[43, 122], hip:[40, 92], shoulder:[78, 90], elbow:[52, 94], hand:[52, 122]},
+          bones: [["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+        },
+      },
+      {
+        label: "Extend — arm straight back, elbow fixed",
+        checkpoint: true,
+        pose: {
+          head: [92, 86],
+          ground: 150,
+          plate: [20, 98],
+          joints: {ankle:[42, 150], knee:[43, 122], hip:[40, 92], shoulder:[78, 90], elbow:[52, 94], hand:[22, 98]},
+          bones: [["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+          ghost: {
+            joints: {elbow:[52, 94], elbowG:[52, 114]},
+            bones: [["elbow", "elbowG"]],
+            label: "avoid: elbow dropping", labelPos: [2, 30],
+          },
+        },
+      },
+    ],
+  },
+
+  benchDipSide: {
+    frames: [
+      {
+        label: "Top — arms straight, hips off the bench",
+        pose: {
+          head: [46, 52],
+          ground: 150,
+          bench: [14, 102, 48],
+          pads: [[22, 108, 22, 148]],
+          joints: {shoulder:[46, 66], hand:[44, 100], hip:[56, 104], ankle:[104, 148], toe:[110, 151]},
+          bones: [["shoulder", "hand"], ["shoulder", "hip"], ["hip", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "hip"],
+        },
+      },
+      {
+        label: "Bottom — elbows about 90°",
+        checkpoint: true,
+        pose: {
+          head: [48, 62],
+          ground: 150,
+          bench: [14, 102, 48],
+          pads: [[22, 108, 22, 148]],
+          joints: {shoulder:[48, 78], elbow:[34, 88], hand:[44, 101], hip:[58, 116], ankle:[104, 148], toe:[110, 151]},
+          bones: [["shoulder", "elbow"], ["elbow", "hand"], ["shoulder", "hip"], ["hip", "ankle"], ["ankle", "toe"]],
+          dots: ["shoulder", "elbow", "hip"],
+          ghost: {
+            joints: {hipBase:[58, 116], hipG:[76, 120]},
+            bones: [["hipBase", "hipG"]],
+            label: "avoid: hips far from bench", labelPos: [2, 40],
+          },
+        },
+      },
+    ],
+  },
+
+  deadBugSide: {
+    frames: [
+      {
+        label: "Start — arms up, knees over hips",
+        pose: {
+          head: [16, 128],
+          ground: 140,
+          joints: {shoulder:[30, 126], hip:[62, 126], hand:[30, 90], knee:[62, 94], foot:[90, 94]},
+          bones: [["shoulder", "hip"], ["shoulder", "hand"], ["hip", "knee"], ["knee", "foot"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Extend opposite arm and leg — back flat",
+        checkpoint: true,
+        pose: {
+          head: [16, 128],
+          ground: 140,
+          joints: {shoulder:[30, 126], hip:[62, 126], hand:[30, 90], handG:[2, 120], knee:[62, 94], foot:[90, 94], footG:[108, 124]},
+          bones: [["shoulder", "hip"], ["shoulder", "hand"], ["shoulder", "handG"], ["hip", "knee"], ["knee", "foot"], ["hip", "footG"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {hipBase:[46, 126], hipG:[46, 112]},
+            bones: [["hipBase", "hipG"]],
+            label: "avoid: back arching", labelPos: [2, 84],
+          },
+        },
+      },
+    ],
+  },
+
+  bicycleCrunchSide: {
+    frames: [
+      {
+        label: "Right knee in, left elbow across",
+        pose: {
+          head: [30, 106],
+          ground: 140,
+          joints: {shoulder:[42, 114], hip:[72, 128], elbow:[62, 100], hand:[34, 104], knee:[86, 104], foot:[98, 118], footG:[112, 130]},
+          bones: [["shoulder", "hip"], ["shoulder", "elbow"], ["elbow", "hand"], ["hip", "knee"], ["knee", "foot"], ["hip", "footG"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+        },
+      },
+      {
+        label: "Switch sides — slow, no neck pulling",
+        checkpoint: true,
+        pose: {
+          head: [30, 106],
+          ground: 140,
+          joints: {shoulder:[42, 114], hip:[72, 128], elbow:[46, 94], hand:[34, 104], knee:[86, 104], foot:[98, 118], footG:[112, 130]},
+          bones: [["shoulder", "hip"], ["shoulder", "elbow"], ["elbow", "hand"], ["hip", "knee"], ["knee", "foot"], ["hip", "footG"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+          ghost: {
+            joints: {hand:[34, 104], handG:[22, 98]},
+            bones: [["hand", "handG"]],
+            label: "avoid: pulling the neck", labelPos: [2, 80],
+          },
+        },
+      },
+    ],
+  },
+
+  mountainClimberSide: {
+    frames: [
+      {
+        label: "High plank — drive one knee in",
+        pose: {
+          head: [19, 92],
+          ground: 141,
+          joints: {shoulder:[32, 98], hand:[32, 140], hip:[66, 112], ankle:[100, 132], toe:[107, 140], frontKnee:[52, 124], frontFoot:[62, 140]},
+          bones: [["shoulder", "hand"], ["shoulder", "hip"], ["hip", "ankle"], ["ankle", "toe"], ["hip", "frontKnee"], ["frontKnee", "frontFoot"]],
+          dots: ["shoulder", "hip", "frontKnee"],
+        },
+      },
+      {
+        label: "Switch legs — hips stay level",
+        checkpoint: true,
+        pose: {
+          head: [19, 92],
+          ground: 141,
+          joints: {shoulder:[32, 98], hand:[32, 140], hip:[66, 112], knee:[52, 124], foot:[62, 140], ankleG:[100, 132], toeG:[107, 140]},
+          bones: [["shoulder", "hand"], ["shoulder", "hip"], ["hip", "knee"], ["knee", "foot"], ["hip", "ankleG"], ["ankleG", "toeG"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {hipBase:[66, 112], hipG:[64, 88]},
+            bones: [["hipBase", "hipG"]],
+            label: "avoid: hips piking", labelPos: [2, 70],
+          },
+        },
+      },
+    ],
+  },
+
+  pallofPressSide: {
+    frames: [
+      {
+        label: "Start — handle at your chest",
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          plate: [68, 52],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], elbow:[62, 62], hand:[68, 52]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "elbow"], ["elbow", "hand"]],
+          dots: ["shoulder", "elbow", "hip", "knee"],
+        },
+      },
+      {
+        label: "Press out and hold — do not twist",
+        checkpoint: true,
+        pose: {
+          head: [58, 30],
+          ground: 150,
+          plate: [100, 50],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], hand:[100, 50]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {hip:[57, 76], shoulderG:[44, 46]},
+            bones: [["hip", "shoulderG"]],
+            head: [40, 36],
+            label: "avoid: leaning away", labelPos: [2, 14],
+          },
+        },
+      },
+    ],
+  },
+
+  russianTwistFront: {
+    frames: [
+      {
+        label: "Bell out to the right, chest tall",
+        pose: {
+          head: [62, 62],
+          ground: 140,
+          plate: [92, 104],
+          joints: {shoulder:[62, 76], hip:[60, 120], hand:[92, 104], knee:[48, 100], foot:[50, 130], kneeG:[72, 100], footG:[70, 130]},
+          bones: [["shoulder", "hip"], ["shoulder", "hand"], ["hip", "knee"], ["knee", "foot"], ["hip", "kneeG"], ["kneeG", "footG"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Rotate through the ribs to the left",
+        checkpoint: true,
+        pose: {
+          head: [58, 62],
+          ground: 140,
+          plate: [28, 104],
+          joints: {shoulder:[58, 76], hip:[60, 120], hand:[28, 104], knee:[48, 100], foot:[50, 130], kneeG:[72, 100], footG:[70, 130]},
+          bones: [["shoulder", "hip"], ["shoulder", "hand"], ["hip", "knee"], ["knee", "foot"], ["hip", "kneeG"], ["kneeG", "footG"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {hip:[60, 120], shoulderG:[76, 84]},
+            bones: [["hip", "shoulderG"]],
+            label: "avoid: arms only", labelPos: [2, 30],
+          },
+        },
+      },
+    ],
+  },
+
+  turkishGetUpSide: {
+    frames: [
+      {
+        label: "Lying — bell straight up",
+        pose: {
+          head: [17, 140],
+          ground: 150,
+          plate: [30, 98],
+          joints: {shoulder:[30, 138], hip:[62, 138], hand:[30, 100], knee:[78, 116], foot:[80, 142], ankleG:[104, 142]},
+          bones: [["shoulder", "hip"], ["shoulder", "hand"], ["hip", "knee"], ["knee", "foot"], ["hip", "ankleG"]],
+          dots: ["shoulder", "hip", "knee"],
+        },
+      },
+      {
+        label: "Sit up — propped on one hand",
+        checkpoint: true,
+        pose: {
+          head: [51, 88],
+          ground: 150,
+          plate: [54, 58],
+          joints: {shoulder:[54, 100], hip:[66, 136], hand:[54, 62], handG:[38, 136], knee:[80, 116], foot:[82, 142], ankleG:[104, 142]},
+          bones: [["shoulder", "hip"], ["shoulder", "hand"], ["shoulder", "handG"], ["hip", "knee"], ["knee", "foot"], ["hip", "ankleG"]],
+          dots: ["shoulder", "hip", "knee"],
+          ghost: {
+            joints: {hand:[54, 62], handG:[66, 64]},
+            bones: [["hand", "handG"]],
+            label: "avoid: arm drifting", labelPos: [2, 36],
+          },
+        },
+      },
+      {
+        label: "Stand — bell locked overhead",
+        pose: {
+          head: [56, 30],
+          ground: 150,
+          plate: [60, 4],
+          joints: {ankle:[55, 150], toe:[76, 152], knee:[55, 112], hip:[57, 76], shoulder:[58, 42], hand:[60, 4]},
+          bones: [["ankle", "toe"], ["ankle", "knee"], ["knee", "hip"], ["hip", "shoulder"], ["shoulder", "hand"]],
+          dots: ["shoulder", "hip", "knee"],
         },
       },
     ],
@@ -1306,6 +2230,268 @@ const FORM_GUIDANCE_DB = {
     cue: "Seated with the pad on your thighs and balls of your feet on the platform, rise up onto your toes, pause, then lower until you feel a stretch.",
     mistakes: ["Bouncing at the bottom instead of a controlled stretch", "Only using a partial range of motion", "Rushing through reps instead of pausing at the top of each one"],
   },
+
+  // ---- Added in the exercise-library expansion (no `family` = text-only guidance, no diagram)
+  "Dumbbell Bench Press": {
+    family: "pressLyingSide",
+    cue: "Lie back with the dumbbells at chest level, feet flat, shoulder blades pinched down into the bench. Press up until your arms are extended, then lower with control until your elbows are just below the bench.",
+    mistakes: ["Letting the dumbbells drift wide of the chest instead of tracking over it", "Dropping the weights fast and bouncing out of the bottom", "Lifting the hips or shoulders off the bench to grind out reps"],
+  },
+  "Incline Barbell Bench Press": {
+    family: "pressLyingSide",
+    cue: "Set the bench to about 30 degrees. Lower the bar to your upper chest with elbows slightly tucked, then press it back up over your shoulders.",
+    mistakes: ["Setting the bench too steep, which turns it into a shoulder press", "Bouncing the bar off the chest", "Flaring the elbows straight out to the sides"],
+  },
+  "Pec Deck": {
+    family: "flyLyingSide",
+    cue: "Adjust the seat so the handles sit at chest height. With a slight bend in your elbows, bring the handles together in front of your chest, squeeze, and return slowly until you feel a stretch.",
+    mistakes: ["Seat too high, which shifts the work to the shoulders", "Letting the handles slam back and overstretching the shoulder joint", "Shrugging the shoulders toward the ears"],
+  },
+  "Push-Up": {
+    family: "pushUpSide",
+    cue: "Hands just outside shoulder width, body in one straight line from head to heels. Lower until your chest is about a fist from the floor, then press back up without letting the hips sag.",
+    mistakes: ["Hips sagging or piking instead of holding a straight line", "Only going down a few inches", "Flaring the elbows straight out to 90 degrees"],
+  },
+  "Kettlebell Floor Press": {
+    family: "pressLyingSide",
+    cue: "Lie on the floor with the kettlebell held by the handle, forearm vertical. Lower until your upper arm touches the floor, pause briefly, then press back up.",
+    mistakes: ["Letting the wrist bend back under the weight of the bell", "Bouncing the arm off the floor at the bottom", "Arching the lower back to press the bell up"],
+  },
+  "Chin-Up": {
+    family: "hangPullFront",
+    cue: "Grip the bar shoulder-width with palms facing you. Start from a full hang, pull your chest toward the bar until your chin clears it, then lower all the way down with control.",
+    mistakes: ["Swinging or kipping to get over the bar", "Stopping short of a full hang at the bottom", "Craning the neck up to get the chin over"],
+  },
+  "Inverted Row": {
+    family: "invertedRowSide",
+    cue: "Set a bar at about waist height and hang underneath it with your body in a straight line. Pull your chest to the bar, squeezing your shoulder blades together, then lower with control.",
+    mistakes: ["Hips sagging so the body stops being a straight line", "Pulling with the arms only instead of driving the elbows back", "Cutting the range short instead of reaching full arm extension"],
+  },
+  "Chest-Supported Dumbbell Row": {
+    family: "chestSupportedRowSide",
+    cue: "Lie chest-down on an incline bench with a dumbbell in each hand. Row the weights toward your hips, squeezing your shoulder blades together, then lower until your arms are fully extended.",
+    mistakes: ["Lifting the chest off the pad to add momentum", "Shrugging the shoulders up instead of pulling the elbows back", "Not letting the arms fully extend between reps"],
+  },
+  "Straight-Arm Pulldown": {
+    family: "straightArmPulldownSide",
+    cue: "Stand facing a high cable with a straight bar, hinged forward slightly with arms nearly straight. Sweep the bar down to your thighs, feeling your lats squeeze, then let it rise back up with control.",
+    mistakes: ["Bending the elbows until it becomes a triceps pushdown", "Using body swing instead of the lats", "Letting the bar rise past shoulder height and losing tension"],
+  },
+  "Machine Row": {
+    family: "rowSideProfile",
+    cue: "Sit with your chest against the pad and grab the handles. Pull your elbows back past your torso, squeeze your shoulder blades together, then return slowly to a full stretch.",
+    mistakes: ["Leaning back to use momentum instead of the back muscles", "Shrugging the shoulders toward the ears", "Cutting the stretch short at the start of each rep"],
+  },
+  "Kettlebell Bent-Over Row": {
+    family: "rowSideProfile",
+    cue: "Hinge at the hips with a flat back, kettlebell hanging from one hand. Row the bell toward your hip, keeping the elbow close, then lower until your arm is straight.",
+    mistakes: ["Rounding the lower back instead of keeping it flat", "Twisting the torso to swing the bell up", "Pulling toward the chest instead of the hip"],
+  },
+  "Back Extension": {
+    family: "backExtensionSide",
+    cue: "Set the pad at hip height and cross your arms over your chest. Lower your torso with a flat back until you feel a hamstring stretch, then raise until your body forms a straight line. Do not go past that.",
+    mistakes: ["Hyperextending the lower back past a straight line at the top", "Rounding the back on the way down", "Swinging fast instead of a smooth, controlled tempo"],
+  },
+  "Arnold Press": {
+    family: "overheadPressFront",
+    cue: "Start with the dumbbells in front of your chest, palms facing you. As you press up, rotate your palms outward so they face forward at the top, then reverse the rotation on the way down.",
+    mistakes: ["Rushing the rotation instead of turning smoothly through the press", "Leaning back and turning it into an incline press", "Using so much weight that the rotation is lost"],
+  },
+  "Machine Shoulder Press": {
+    family: "overheadPressFront",
+    cue: "Set the seat so the handles start at about shoulder height. Press up until your arms are extended without hard-locking the elbows, then lower with control.",
+    mistakes: ["Seat set so low that the shoulders are stressed at the bottom", "Arching the lower back off the pad", "Shrugging the shoulders up during the press"],
+  },
+  "Pike Push-Up": {
+    family: "pikePushUpSide",
+    cue: "From a push-up position, walk the feet in and raise your hips so your body forms an upside-down V. Bend your elbows to lower your head toward the floor between your hands, then press back up.",
+    mistakes: ["Keeping the hips low so it is just a regular push-up", "Flaring the elbows wide instead of tracking them back", "Landing on the neck instead of lowering the head between the hands"],
+  },
+  "Reverse Pec Deck": {
+    family: "reversePecDeckFront",
+    cue: "Sit facing the pad, arms extended at shoulder height. Sweep the handles back and out in a wide arc, squeezing your rear delts, then return slowly.",
+    mistakes: ["Using the arms to pull instead of leading with the elbows", "Shrugging the shoulders up", "Using so much weight that the torso rocks back and forth"],
+  },
+  "Dumbbell Front Raise": {
+    family: "frontRaiseSide",
+    cue: "Stand tall with the dumbbells in front of your thighs. Raise them straight ahead to about shoulder height with a slight elbow bend, then lower with control.",
+    mistakes: ["Swinging the torso to heave the weights up", "Raising the arms above shoulder height", "Dropping the weights fast on the way down"],
+  },
+  "Kettlebell Overhead Press": {
+    family: "overheadPressFront",
+    cue: "Hold the kettlebell in the rack position, resting against your forearm with your wrist straight. Squeeze your glutes and press it straight overhead until your arm is locked out beside your ear, then lower back to the rack.",
+    mistakes: ["Leaning back and pressing with the lower back", "Letting the wrist bend so the bell tips backward", "Pressing the bell out in front of you instead of straight up"],
+  },
+  "Kettlebell Clean and Press": {
+    family: "kbCleanPressSide",
+    cue: "Start with the bell between your feet. Hinge and snap the hips forward, pulling the bell up to the rack position close to your body, then press it overhead. Lower it back to the rack and then down under control.",
+    mistakes: ["Curling the bell up with the arm instead of driving with the hips", "Letting the bell swing out and bang against the wrist or forearm", "Skipping the reset and pressing from a loose, unstable rack position"],
+  },
+  "Kettlebell Halo": {
+    family: "kbHaloSide",
+    cue: "Hold the kettlebell upside down by the horns at chest height. Circle it around your head, keeping it close to your face and your ribs down, then reverse direction on the next set.",
+    mistakes: ["Arching the lower back as the bell passes behind the head", "Letting the bell drift far from the head", "Rushing the circles instead of keeping a slow, smooth pace"],
+  },
+  "Goblet Squat": {
+    family: "squatSideProfile",
+    cue: "Hold the kettlebell by the horns against your chest. Sit down between your knees with your chest up and elbows inside the knees, then drive through your whole foot to stand.",
+    mistakes: ["Letting the chest fall forward as you descend", "Heels lifting off the floor", "Knees caving inward on the way up"],
+  },
+  "Hack Squat": {
+    family: "hackSquatSide",
+    cue: "Place your shoulders under the pads with your feet forward on the platform. Lower until your thighs are at least parallel to the platform, then push through your whole foot to stand.",
+    mistakes: ["Feet placed so far forward that the knees never bend", "Lifting the heels at the bottom", "Locking the knees hard at the top"],
+  },
+  "Dumbbell Walking Lunge": {
+    family: "lungeSide",
+    cue: "Hold a dumbbell in each hand. Step forward into a lunge until both knees are bent to about 90 degrees, then drive through the front heel to bring the back leg through into the next step.",
+    mistakes: ["Taking steps so short that the front knee travels far past the toes", "Letting the torso lean forward instead of staying tall", "Front knee caving inward as you push up"],
+  },
+  "Reverse Lunge": {
+    family: "lungeSide",
+    cue: "Stand tall and step one foot straight back, lowering until both knees are bent to about 90 degrees. Push through the front heel to return to standing, and alternate legs.",
+    mistakes: ["Stepping back onto a tightrope so balance is lost", "Letting the front knee cave inward", "Pushing off the back foot instead of driving through the front heel"],
+  },
+  "Step-Up": {
+    family: "stepUpSide",
+    cue: "Hold a dumbbell in each hand and place one foot fully on a bench or box. Drive through that heel to stand up tall, then lower back down slowly. Complete all reps on one side before switching.",
+    mistakes: ["Pushing off the trailing foot instead of driving through the working leg", "Using a box so high that the hips rotate to get up", "Dropping back down instead of lowering with control"],
+  },
+  "Conventional Deadlift": {
+    family: "hipHingeStandingSide",
+    cue: "Stand with the bar over mid-foot, hinge down and grip just outside your legs. Brace your core, push the floor away, and stand tall with the bar dragging up your legs, then lower it the same way.",
+    mistakes: ["Rounding the lower back off the floor", "Letting the bar drift away from the legs", "Jerking the bar off the floor instead of building tension first"],
+  },
+  "Dumbbell Romanian Deadlift": {
+    family: "hipHingeStandingSide",
+    cue: "Stand tall with a dumbbell in each hand. Push your hips back with soft knees, lowering the weights along your legs until you feel a hamstring stretch, then squeeze your glutes to stand.",
+    mistakes: ["Bending the knees too much so it turns into a squat", "Rounding the back to reach the weights lower", "Letting the dumbbells drift away from the legs"],
+  },
+  "Good Morning": {
+    family: "hipHingeStandingSide",
+    cue: "With a barbell across your upper back, soften your knees and push your hips straight back, keeping your back flat, until your torso is near parallel to the floor. Drive your hips forward to stand.",
+    mistakes: ["Rounding the lower back", "Bending the knees so much that it turns into a squat", "Loading heavy before the hinge pattern is solid"],
+  },
+  "Seated Leg Curl": {
+    family: "seatedLegCurlSide",
+    cue: "Sit with the pad resting just above your heels and your thighs held down. Curl your heels back and under the seat, squeeze your hamstrings, then return slowly.",
+    mistakes: ["Lifting the hips or thighs off the seat", "Using momentum instead of a controlled curl", "Cutting the range short at the top"],
+  },
+  "Kettlebell Swing": {
+    family: "hipHingeStandingSide",
+    cue: "Hinge back with the bell between your legs, then snap your hips forward hard so the bell floats to about chest height. Let it swing back between your legs as you hinge again.",
+    mistakes: ["Squatting the swing instead of hinging the hips back", "Lifting the bell with the arms instead of the hip snap", "Leaning back at the top instead of standing tall"],
+  },
+  "Kettlebell Deadlift": {
+    family: "hipHingeStandingSide",
+    cue: "Stand with the kettlebell between your feet. Hinge down and grab the handle with a flat back, push through the floor to stand tall, then lower it back down under control.",
+    mistakes: ["Rounding the back to reach the bell", "Squatting down instead of hinging back", "Yanking the bell off the floor without tension"],
+  },
+  "Single-Leg Kettlebell RDL": {
+    family: "singleLegRdlSide",
+    cue: "Hold a kettlebell in one hand. Balance on the opposite leg, hinge at the hip and reach the bell toward the floor as your free leg extends behind you, then squeeze the glute to stand tall.",
+    mistakes: ["Rotating the hips open instead of keeping them square", "Rounding the back to reach lower", "Bending the standing knee too much"],
+  },
+  "Glute Bridge": {
+    family: "hipThrustSupineSide",
+    cue: "Lie on your back with knees bent and feet flat. Press through your heels to lift the hips until your body forms a straight line from shoulders to knees, squeeze the glutes, then lower.",
+    mistakes: ["Overarching the lower back at the top", "Pushing through the toes instead of the heels", "Rushing reps with no pause at the top"],
+  },
+  "Single-Leg Glute Bridge": {
+    family: "hipThrustSupineSide",
+    cue: "Lie on your back with one knee bent and the other leg extended. Press through the heel of the bent leg to lift the hips, squeeze the glute, then lower with control. Finish all reps on one side before switching.",
+    mistakes: ["Letting the hips rotate or drop on the free side", "Overarching the lower back at the top", "Pushing through the toes instead of the heel"],
+  },
+  "Nordic Hamstring Curl": {
+    family: "nordicCurlSide",
+    cue: "Kneel with your ankles anchored under a pad or held by a partner. Keeping your body straight from knees to head, lower yourself toward the floor as slowly as you can, then catch yourself and push back up.",
+    mistakes: ["Breaking at the hips instead of keeping the body straight", "Dropping fast with no control", "Skipping the hands-assisted push back up when needed"],
+  },
+  "Preacher Curl": {
+    family: "preacherCurlSide",
+    cue: "Sit with your upper arms flat on the pad and grip the bar shoulder-width. Curl the bar up without lifting your elbows, then lower until your arms are nearly straight.",
+    mistakes: ["Lifting the elbows off the pad to swing the weight up", "Dropping the weight fast at the bottom, which stresses the elbows", "Cutting the range short instead of reaching full extension"],
+  },
+  "Incline Dumbbell Curl": {
+    family: "inclineCurlSide",
+    cue: "Sit back on a bench set to about 45-60 degrees with your arms hanging straight down. Curl the dumbbells up without letting your elbows drift forward, then lower fully to feel the stretch.",
+    mistakes: ["Letting the elbows drift forward to shorten the range", "Swinging the weights up with the shoulders", "Not lowering all the way to the stretched position"],
+  },
+  "Concentration Curl": {
+    family: "concentrationCurlSide",
+    cue: "Sit on a bench and brace your elbow against the inside of your thigh. Curl the dumbbell up toward your shoulder, squeeze at the top, then lower under control.",
+    mistakes: ["Swinging the torso to help lift the weight", "Letting the elbow lift off the thigh", "Rushing the lowering phase"],
+  },
+  "Rope Triceps Pushdown": {
+    family: "tricepPushdownSide",
+    cue: "Stand facing a high cable with the rope in both hands and elbows pinned at your sides. Push down and pull the ends of the rope apart at the bottom, squeezing your triceps, then return with control.",
+    mistakes: ["Elbows flaring out or drifting forward", "Leaning over the rope and using body weight", "Not spreading the rope at the bottom, cutting the contraction short"],
+  },
+  "Triceps Kickback": {
+    family: "kickbackSide",
+    cue: "Hinge forward with a flat back and your upper arm parallel to the floor, elbow bent to 90 degrees. Extend your forearm back until the arm is straight, squeeze, then return without letting the elbow drop.",
+    mistakes: ["Letting the upper arm drop so the elbow is no longer fixed", "Swinging the weight back with momentum", "Using a weight so heavy that the torso rocks"],
+  },
+  "Bench Dip": {
+    family: "benchDipSide",
+    cue: "Sit on the edge of a bench with hands gripping beside your hips and legs out in front. Slide your hips off the bench and lower until your elbows are bent to about 90 degrees, then press back up.",
+    mistakes: ["Letting the shoulders roll forward and drop too deep", "Sliding the hips too far away from the bench", "Flaring the elbows instead of keeping them pointing back"],
+  },
+  "Diamond Push-Up": {
+    family: "pushUpSide",
+    cue: "Place your hands close together beneath your chest with the thumbs and index fingers forming a diamond. Keep your body in a straight line and lower your chest to your hands, then press back up.",
+    mistakes: ["Hips sagging or piking instead of holding a straight line", "Flaring the elbows wide instead of tracking them back", "Only lowering halfway"],
+  },
+  "Kettlebell Overhead Triceps Extension": {
+    family: "overheadTricepExtFront",
+    cue: "Hold the kettlebell by the horns with both hands overhead. Keeping your elbows pointing forward, lower the bell behind your head, then extend your arms back to the top.",
+    mistakes: ["Elbows flaring out to the sides", "Arching the lower back as the weight goes behind the head", "Using a weight so heavy that the elbows can't stay in"],
+  },
+  "Dead Bug": {
+    family: "deadBugSide",
+    cue: "Lie on your back with your arms pointing up and knees bent over your hips. Keeping your lower back flat on the floor, extend the opposite arm and leg away from you, then return and alternate sides.",
+    mistakes: ["Letting the lower back arch off the floor", "Moving fast instead of slow and controlled", "Holding the breath instead of exhaling as the limbs extend"],
+  },
+  "Bicycle Crunch": {
+    family: "bicycleCrunchSide",
+    cue: "Lie on your back with your hands lightly behind your head. Bring one knee toward your chest while rotating the opposite elbow toward it, then switch sides in a slow pedaling motion.",
+    mistakes: ["Pulling on the neck with the hands", "Rushing through the rotation", "Letting the lower back arch off the floor"],
+  },
+  "Hanging Knee Raise": {
+    family: "hangingLegRaiseFront",
+    cue: "Hang from a bar with a firm grip. Curl your knees up toward your chest by tilting the pelvis, then lower with control without swinging.",
+    mistakes: ["Swinging the legs to build momentum", "Using only the hip flexors instead of curling the pelvis", "Dropping the legs fast at the bottom"],
+  },
+  "Mountain Climber": {
+    family: "mountainClimberSide",
+    cue: "Start in a high plank with hands under shoulders. Drive one knee toward your chest, then switch legs in a quick running motion while keeping your hips level. Count each knee drive as one rep.",
+    mistakes: ["Hips piking up or sagging down", "Bouncing so much that the shoulders lose position", "Cutting each knee drive short"],
+  },
+  "Pallof Press": {
+    family: "pallofPressSide",
+    cue: "Stand side-on to a cable at chest height with the handle held to your chest. Press the handle straight out in front of you and hold it there without letting the cable rotate you, then return.",
+    mistakes: ["Letting the torso twist toward the cable", "Leaning away from the cable", "Rushing instead of holding the extension for a beat"],
+  },
+  "Kettlebell Russian Twist": {
+    family: "russianTwistFront",
+    cue: "Sit with knees bent and your torso leaned back slightly, holding the kettlebell at your chest. Rotate your torso to tap the bell beside each hip, moving from your ribs rather than just swinging the arms.",
+    mistakes: ["Swinging the arms while the torso stays still", "Rounding the back", "Letting the feet crash down when they are lifted"],
+  },
+  "Kettlebell Turkish Get-Up": {
+    family: "turkishGetUpSide",
+    cue: "Lie on your back holding the kettlebell straight up with one arm, eyes on the bell. Rise to sitting, lift the hips, sweep the leg under you, and stand up, then reverse each step to lie back down.",
+    mistakes: ["Letting the arm bend or drift so the bell isn't stacked over the shoulder", "Rushing through the transitions", "Starting heavy before the movement pattern is smooth"],
+  },
+  "Single-Leg Calf Raise": {
+    family: "calfRaiseStandingSide",
+    cue: "Stand on the ball of one foot on a step, with a light hand on a wall for balance. Lower the heel below the step, then rise onto your toes as high as you can. Finish all reps on one side before switching.",
+    mistakes: ["Bouncing at the bottom instead of a controlled stretch", "Only using a partial range of motion", "Rolling toward the outside of the foot"],
+  },
+  "Dumbbell Calf Raise": {
+    family: "calfRaiseStandingSide",
+    cue: "Stand on the balls of your feet on a step holding a dumbbell at your side. Rise onto your toes as high as you can, pause, then lower until you feel a stretch.",
+    mistakes: ["Bouncing at the bottom", "Cutting the range short instead of full stretch to full raise", "Rushing through the reps"],
+  },
 };
 
 function hasFormGuidance(exerciseName) {
@@ -1317,11 +2503,15 @@ function hasFormGuidance(exerciseName) {
 function buildFormGuidanceHTML(exerciseName) {
   const entry = FORM_GUIDANCE_DB[exerciseName];
   if (!entry) return "";
-  const family = POSE_FAMILIES[entry.family];
-  if (!family) return "";
+  // `family` is optional: entries without one get the text cue and common
+  // mistakes but no stick-figure diagram.
+  const family = entry.family ? POSE_FAMILIES[entry.family] : null;
 
-  const frameEls = family.frames.map((frame, i) => renderFrame(frame, i));
-  const withArrows = frameEls.join('<span class="arrow">&rarr;</span>');
+  let framesHTML = "";
+  if (family) {
+    const frameEls = family.frames.map((frame, i) => renderFrame(frame, i));
+    framesHTML = `<div class="frames">${frameEls.join('<span class="arrow">&rarr;</span>')}</div>`;
+  }
 
   const mistakesHTML = entry.mistakes.map((m) => `<li>${m}</li>`).join("");
 
@@ -1337,7 +2527,7 @@ function buildFormGuidanceHTML(exerciseName) {
         <p class="mistakes-label">Common mistakes</p>
         <ul>${mistakesHTML}</ul>
       </div>
-      <div class="frames">${withArrows}</div>
+      ${framesHTML}
     </div>`;
 }
 

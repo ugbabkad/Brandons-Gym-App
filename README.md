@@ -1,7 +1,9 @@
-# Lift Tracker — MVP
+# Brandons Gym App
 
-Local-first weightlifting tracker PWA. No build step, no server, no login —
-plain HTML/CSS/JS, data stored in the browser's localStorage.
+Weightlifting tracker PWA. No build step — plain HTML/CSS/JS. Workouts are
+saved to a Supabase project ("Brandons Gym App") behind an email + password
+login, so history survives a lost phone or cleared browser and can be queried
+directly to adjust future workouts.
 
 ## Try it locally
 ```
@@ -15,13 +17,28 @@ same network, use your Mac's LAN IP instead of localhost.
 Once this is hosted somewhere reachable from your phone (even a simple
 static host — GitHub Pages, Netlify, etc. — since `file://` won't work for
 a service worker): open it in Safari → Share → **Add to Home Screen**. It
-then launches full-screen with no browser chrome and works offline.
+then launches full-screen with no browser chrome. It needs a connection
+to load and save your workouts.
 
 ## What's built
 - `js/db.js` — exercise database (full gym: barbell/dumbbell/machine/cable/
-  bodyweight/assisted-machine), tagged by muscle group and
-  compound/isolation. 46 exercises total.
-- `js/store.js` — localStorage data layer; source of truth for history.
+  bodyweight/kettlebell/assisted-machine), tagged by muscle group and
+  compound/isolation. 96 exercises total.
+- `js/cloud.js` — Supabase connection and sign-in. The publishable key in it
+  is meant to be public; row-level security in the database (each row is
+  owned by the signed-in user) is what protects the data.
+- `js/store.js` — cloud data layer; source of truth for history. History is
+  loaded once at startup into memory (so routine/progression stay
+  synchronous); every write goes to the database. An in-progress workout is
+  saved set-by-set and picked back up if the app is closed mid-workout;
+  Finish Workout reconciles everything on screen and only clears it once the
+  save succeeds. The old on-phone history (`liftTracker.history.v1`) is moved
+  into the cloud once after the first sign-in.
+
+  Tables: `workout_sessions` (notes, cardio), `session_exercises`, `sets`
+  (weights in lbs, optional RPE), plus a `set_history` view for analysis.
+  Assisted machines are flagged `weightMeaning: "assistance"` in `db.js`, so
+  progression lowers the assistance instead of adding weight.
 - `js/routine.js` — auto-varying routine generator: ranks muscle groups by
   days since last trained (respecting a minimum recovery window, with a
   shuffle so a fresh user doesn't always get the same combo) and builds a
@@ -43,7 +60,7 @@ then launches full-screen with no browser chrome and works offline.
     unassisted version.
 - `js/formGuidance.js` — per-exercise form guidance, shown in a collapsed
   "Form guidance ▸" section on each exercise card (tap to expand). Covers
-  all 46 exercises: a written cue, 2-3 common mistakes, and a short
+  all 96 exercises, each with a stick-figure diagram (~53 pose families; `pads` supports benches/boxes/machine pads): a written cue, 2-3 common mistakes, and a short
   stick-figure diagram sequence rendered as inline SVG (data-driven off
   ~26 reusable "pose families" rather than one-off art per exercise). Some
   poses include a faint red "ghost" overlay showing one common mistake
