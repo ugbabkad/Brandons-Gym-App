@@ -335,6 +335,15 @@ main {
   margin-bottom: 0;
 }
 
+.view-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin: 12px 0 6px;
+}
+
 .frames {
   display: flex;
   align-items: flex-start;

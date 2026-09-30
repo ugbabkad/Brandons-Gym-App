@@ -195,6 +195,31 @@ function renderPose(pose, color) {
   const pads = (pose.pads || [])
     .map(([x1, y1, x2, y2]) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#3a3f55" stroke-width="7" stroke-linecap="round"/>`)
     .join("");
+  // Top-down bench (vertical pad behind a lying figure): [cx, y1, y2, width].
+  const benchTop = pose.benchTop
+    ? `<rect x="${pose.benchTop[0] - pose.benchTop[3] / 2}" y="${pose.benchTop[1]}" width="${pose.benchTop[3]}" height="${pose.benchTop[2] - pose.benchTop[1]}" rx="6" fill="#2e3244"/>`
+    : "";
+  // Dashed reference lines (e.g. shoulder width): [x1,y1,x2,y2].
+  const guides = (pose.guides || [])
+    .map(([x1, y1, x2, y2]) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#f0b429" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.8"/>`)
+    .join("");
+  const guideLabel = pose.guideLabel
+    ? `<text x="${pose.guideLabel[1]}" y="${pose.guideLabel[2]}" font-size="7.5" fill="#f0b429" text-anchor="middle" opacity="0.9">${pose.guideLabel[0]}</text>`
+    : "";
+  // Cable runs / rope: thin lines [x1,y1,x2,y2]. Handles: short solid bar, no plates.
+  const cables = (pose.cables || [])
+    .map(([x1, y1, x2, y2]) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#9297a8" stroke-width="1.5" stroke-linecap="round"/>`)
+    .join("");
+  const ropes = (pose.ropes || [])
+    .map(([x1, y1, x2, y2]) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#b8bccb" stroke-width="2" stroke-linecap="round"/>`)
+    .join("");
+  const handles = (pose.handles || [])
+    .map(([x1, y1, x2, y2]) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#9297a8" stroke-width="3.5" stroke-linecap="round"/>`)
+    .join("");
+  // Dumbbells / kettlebells seen end-on: [[x,y], ...].
+  const weights = (pose.weights || [])
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#9297a8" stroke="${OUTLINE}" stroke-width="2"/>`)
+    .join("");
   const plateV = pose.plateV
     ? `<line x1="${pose.plateV[0]}" y1="${pose.plateV[1]}" x2="${pose.plateV[0]}" y2="${pose.plateV[2]}" stroke="#3a3f55" stroke-width="7" stroke-linecap="round"/>`
     : "";
@@ -225,7 +250,15 @@ function renderPose(pose, color) {
   }
 
   const body = renderBody(pose, color);
-  return `<svg viewBox="${VIEWBOX}">${ground}${bench}${pads}${ghostSvg}${plateV}${body}${bar}${plate}${ghostLabel}</svg>`;
+  // Hands drawn again on top of any bar/handle so the grip position reads.
+  let grips = "";
+  if ((pose.bar || pose.handles) && pose.joints) {
+    grips = Object.keys(pose.joints)
+      .filter((n) => /^hand(L|R)?$/.test(n))
+      .map((n) => `<circle cx="${pose.joints[n][0]}" cy="${pose.joints[n][1]}" r="4.2" fill="${color}" stroke="${OUTLINE}" stroke-width="1.5"/>`)
+      .join("");
+  }
+  return `<svg viewBox="${VIEWBOX}">${ground}${bench}${benchTop}${pads}${pose.ghost && pose.ghost.front ? "" : ghostSvg}${plateV}${cables}${body}${ropes}${handles}${bar}${plate}${weights}${grips}${pose.ghost && pose.ghost.front ? ghostSvg : ""}${guides}${guideLabel}${ghostLabel}</svg>`;
 }
 
 function renderFrame(frame, index) {
@@ -2009,6 +2042,364 @@ const POSE_FAMILIES = {
 
 // ===================== PER-EXERCISE TEXT =====================
 
+// ===================== EXTRA VIEWS (front / top-down) =====================
+// Side views can't show grip width, elbow flare, stance width or knee
+// tracking, so some exercises get a second strip of frames from the front
+// or from directly above. These families are built with small helpers
+// (left-side joints are authored, right side is mirrored) and merged into
+// POSE_FAMILIES; EXTRA_VIEWS maps exercise names to them.
+
+const MID = 60;
+const mirrorPt = ([x, y]) => [2 * MID - x, y];
+// Where front-view arms attach (matches the arm-root offset in renderBody).
+const armRoot = (shoulderY) => [MID - 14.5, shoulderY + 4];
+
+// Builds a symmetric front/top pose. Pass LEFT-side limb joints (elbow,
+// hand, knee, ankle, toe); right side is mirrored unless overridden with
+// e.g. `handR`. Any other keys (bar, guides, ghost, ...) pass through.
+function symPose(o) {
+  const { head, shoulder, hip, elbow, hand, knee, ankle, toe, ...rest } = o;
+  const joints = { shoulder, hip };
+  const bones = [["shoulder", "hip"]];
+  const pair = (name, p) => {
+    if (!p) return false;
+    joints[name + "L"] = p;
+    joints[name + "R"] = rest[name + "R"] || mirrorPt(p);
+    delete rest[name + "R"];
+    return true;
+  };
+  if (pair("elbow", elbow) && pair("hand", hand)) {
+    bones.push(["shoulder", "elbowL"], ["elbowL", "handL"], ["shoulder", "elbowR"], ["elbowR", "handR"]);
+  }
+  if (pair("knee", knee) && pair("ankle", ankle)) {
+    bones.push(["hip", "kneeL"], ["kneeL", "ankleL"], ["hip", "kneeR"], ["kneeR", "ankleR"]);
+    if (pair("toe", toe)) bones.push(["ankleL", "toeL"], ["ankleR", "toeR"]);
+  }
+  return { head, joints, bones, ...rest };
+}
+
+// Dashed shoulder-width reference lines.
+const shoulderGuides = (shoulderY, bottomY) => {
+  const [x] = armRoot(shoulderY);
+  return {
+    guides: [[x, 11, x, bottomY], [2 * MID - x, 11, 2 * MID - x, bottomY]],
+    guideLabel: ["shoulder width", MID, 8],
+  };
+};
+
+// Red dashed "wrong" upper arms (e.g. flared elbows), both sides.
+const ghostArms = (shoulderY, elbowG, label, labelPos) => {
+  const root = armRoot(shoulderY);
+  return {
+    joints: { sL: root, eL: elbowG, sR: mirrorPt(root), eR: mirrorPt(elbowG) },
+    bones: [["sL", "eL"], ["sR", "eR"]],
+    label, labelPos,
+  };
+};
+
+// Red dashed "wrong" legs (e.g. knees caving in), both sides.
+const ghostKnees = (hipY, kneeG, ankle, label, labelPos) => {
+  const hipL = [MID - 4.5, hipY];
+  return {
+    joints: { hL: hipL, kL: kneeG, aL: ankle, hR: mirrorPt(hipL), kR: mirrorPt(kneeG), aR: mirrorPt(ankle) },
+    bones: [["hL", "kL"], ["kL", "aL"], ["hR", "kR"], ["kR", "aR"]],
+    label, labelPos,
+    front: true, // legs would hide it otherwise
+  };
+};
+
+// Shared bodies.
+const LYING_TOP = { head: [60, 24], shoulder: [60, 38], hip: [60, 92], knee: [48, 116], ankle: [42, 134], toe: [40, 140], benchTop: [60, 16, 112, 30] };
+const PRONE_TOP = { head: [60, 22], shoulder: [60, 36], hip: [60, 90], knee: [55, 122], ankle: [54, 150], toe: [54, 155] };
+const STAND_FRONT = { head: [60, 26], shoulder: [60, 40], hip: [60, 90], knee: [51, 120], ankle: [51, 150], toe: [48, 156], ground: 157 };
+const SQUAT_BOTTOM = { head: [60, 64], shoulder: [60, 78], hip: [60, 112], knee: [40, 118], ankle: [47, 150], toe: [42, 156], ground: 157 };
+const SQUAT_STAND = { ...STAND_FRONT, knee: [49, 120], ankle: [48, 150], toe: [43, 156] };
+const KNEES_CAVING = ghostKnees(112, [54, 128], [47, 150], "avoid: knees caving in", [26, 167]);
+
+const EXTRA_VIEW_FAMILIES = {
+  // Barbell Bench Press, Incline Barbell Bench Press
+  benchTopBarbell: {
+    title: "Top view — grip & elbows",
+    frames: [
+      {
+        label: "Grip a bit wider than shoulders",
+        pose: symPose({ ...LYING_TOP, elbow: [30, 64], hand: [32, 52], bar: [24, 52, 96], ...shoulderGuides(38, 84) }),
+      },
+      {
+        label: "Elbows ~45° from torso",
+        checkpoint: true,
+        pose: symPose({
+          ...LYING_TOP, elbow: [30, 64], hand: [32, 52], bar: [24, 52, 96],
+          ghost: ghostArms(38, [20, 44], "avoid: elbows flared 90°", [16, 10]),
+        }),
+      },
+    ],
+  },
+
+  // Close-Grip Bench Press
+  closeGripBenchTop: {
+    title: "Top view — hand spacing",
+    frames: [
+      {
+        label: "Hands just inside shoulders",
+        pose: symPose({
+          ...LYING_TOP, elbow: [40, 72], hand: [50, 54], bar: [24, 54, 96], ...shoulderGuides(38, 84),
+          ghost: {
+            joints: { eL: [40, 72], hL: [57, 54], eR: [80, 72], hR: [63, 54] },
+            bones: [["eL", "hL"], ["eR", "hR"]],
+            label: "avoid: hands touching", labelPos: [20, 162],
+          },
+        }),
+      },
+      {
+        label: "Elbows tucked to your sides",
+        checkpoint: true,
+        pose: symPose({
+          ...LYING_TOP, elbow: [40, 72], hand: [50, 54], bar: [24, 54, 96],
+          ghost: ghostArms(38, [20, 44], "avoid: elbows flared out", [18, 10]),
+        }),
+      },
+    ],
+  },
+
+  // Dumbbell Bench Press, Incline Dumbbell Press, Kettlebell Floor Press
+  benchTopDumbbell: {
+    title: "Top view — elbow angle",
+    frames: [
+      {
+        label: "Bottom — elbows ~45°",
+        checkpoint: true,
+        pose: symPose({
+          ...LYING_TOP, elbow: [34, 62], hand: [36, 53], weights: [[36, 53], [84, 53]],
+          ghost: ghostArms(38, [20, 44], "avoid: elbows flared 90°", [16, 10]),
+        }),
+      },
+      {
+        label: "Top — press up over chest",
+        pose: symPose({ ...LYING_TOP, elbow: [44, 50], hand: [48, 50], weights: [[48, 50], [72, 50]] }),
+      },
+    ],
+  },
+
+  // Push-Up
+  pushUpTop: {
+    title: "Top view — hands & elbows",
+    frames: [
+      {
+        label: "Hands just outside shoulders",
+        pose: symPose({ ...PRONE_TOP, elbow: [38, 47], hand: [36, 51], ...shoulderGuides(36, 80) }),
+      },
+      {
+        label: "Bottom — elbows back ~45°",
+        checkpoint: true,
+        pose: symPose({
+          ...PRONE_TOP, elbow: [32, 64], hand: [36, 51],
+          ghost: ghostArms(36, [18, 42], "avoid: elbows flared 90°", [16, 10]),
+        }),
+      },
+    ],
+  },
+
+  // Diamond Push-Up
+  diamondPushUpTop: {
+    title: "Top view — hand placement",
+    frames: [
+      {
+        label: "Hands together under chest",
+        pose: symPose({ ...PRONE_TOP, elbow: [46, 52], hand: [55, 57], ...shoulderGuides(36, 80) }),
+      },
+      {
+        label: "Elbows track back along ribs",
+        checkpoint: true,
+        pose: symPose({
+          ...PRONE_TOP, elbow: [42, 72], hand: [55, 57],
+          ghost: ghostArms(36, [20, 46], "avoid: elbows flared out", [18, 10]),
+        }),
+      },
+    ],
+  },
+
+  // Barbell Back Squat
+  squatFrontBar: {
+    title: "Front view — stance & knees",
+    frames: [
+      {
+        label: "Feet ~shoulder-width, toes slightly out",
+        pose: symPose({ ...SQUAT_STAND, elbow: [40, 58], hand: [37, 42], bar: [22, 41, 98], ...shoulderGuides(40, 156) }),
+      },
+      {
+        label: "Bottom — knees track over toes",
+        checkpoint: true,
+        pose: symPose({ ...SQUAT_BOTTOM, elbow: [40, 96], hand: [37, 80], bar: [22, 79, 98], ghost: KNEES_CAVING }),
+      },
+    ],
+  },
+
+  // Front Squat
+  frontSquatFront: {
+    title: "Front view — stance & knees",
+    frames: [
+      {
+        label: "Feet ~shoulder-width, elbows up",
+        pose: symPose({ ...SQUAT_STAND, elbow: [36, 50], hand: [44, 44], bar: [22, 44, 98], ...shoulderGuides(40, 156) }),
+      },
+      {
+        label: "Bottom — knees track over toes",
+        checkpoint: true,
+        pose: symPose({ ...SQUAT_BOTTOM, elbow: [36, 88], hand: [44, 82], bar: [22, 82, 98], ghost: KNEES_CAVING }),
+      },
+    ],
+  },
+
+  // Goblet Squat
+  gobletSquatFront: {
+    title: "Front view — stance & knees",
+    frames: [
+      {
+        label: "Feet ~shoulder-width, weight at chest",
+        pose: symPose({ ...SQUAT_STAND, elbow: [44, 68], hand: [55, 58], plate: [60, 58], ...shoulderGuides(40, 156) }),
+      },
+      {
+        label: "Bottom — elbows inside knees",
+        checkpoint: true,
+        pose: symPose({ ...SQUAT_BOTTOM, elbow: [47, 102], hand: [55, 92], plate: [60, 92], ghost: KNEES_CAVING }),
+      },
+    ],
+  },
+
+  // Conventional Deadlift
+  deadliftFront: {
+    title: "Front view — grip & stance",
+    frames: [
+      {
+        label: "Grip just outside your legs",
+        checkpoint: true,
+        pose: symPose({
+          head: [60, 64], shoulder: [60, 76], hip: [60, 100], knee: [51, 122], ankle: [51, 150], toe: [48, 156], ground: 157,
+          elbow: [41, 104], hand: [40, 130], bar: [20, 130, 100],
+          ghost: {
+            joints: { eL: [41, 104], hL: [28, 130], eR: [79, 104], hR: [92, 130] },
+            bones: [["eL", "hL"], ["eR", "hR"]],
+            label: "avoid: grip too wide", labelPos: [30, 167],
+          },
+        }),
+      },
+      {
+        label: "Lockout — bar on thighs",
+        pose: symPose({ ...STAND_FRONT, elbow: [41, 68], hand: [40, 96], bar: [20, 96, 100] }),
+      },
+    ],
+  },
+
+  // Bulgarian Split Squat, Dumbbell Walking Lunge, Reverse Lunge
+  lungeFront: {
+    title: "Front view — knee tracking",
+    frames: [
+      {
+        label: "Start — feet hip-width",
+        pose: symPose({ ...STAND_FRONT, knee: [52, 120], ankle: [52, 150], toe: [50, 156], elbow: [38, 66], hand: [36, 90], weights: [[36, 92], [84, 92]] }),
+      },
+      {
+        label: "Bottom — front knee over mid-foot",
+        checkpoint: true,
+        pose: symPose({
+          head: [60, 48], shoulder: [60, 62], hip: [60, 108], ground: 157,
+          knee: [50, 124], ankle: [50, 150], toe: [48, 156],
+          kneeR: [68, 147], ankleR: [68, 151], toeR: [68, 153],
+          elbow: [38, 88], hand: [36, 112], weights: [[36, 114], [84, 114]],
+          ghost: {
+            joints: { h: [55.5, 108], k: [64, 126], a: [50, 150] },
+            bones: [["h", "k"], ["k", "a"]],
+            front: true,
+            label: "avoid: knee caving in", labelPos: [24, 167],
+          },
+        }),
+      },
+    ],
+  },
+
+  // Cable Triceps Pushdown (straight bar)
+  pushdownFrontBar: {
+    title: "Front view — elbows",
+    frames: [
+      {
+        label: "Start — elbows pinned at sides",
+        pose: symPose({ ...STAND_FRONT, elbow: [42, 70], hand: [50, 58], cables: [[60, 0, 60, 58]], handles: [[46, 58, 74, 58]] }),
+      },
+      {
+        label: "Arms straight, elbows still",
+        checkpoint: true,
+        pose: symPose({
+          ...STAND_FRONT, elbow: [42, 70], hand: [48, 96], cables: [[60, 0, 60, 96]], handles: [[44, 96, 76, 96]],
+          ghost: ghostArms(40, [22, 64], "avoid: elbows flaring", [18, 10]),
+        }),
+      },
+    ],
+  },
+
+  // Rope Triceps Pushdown
+  pushdownFrontRope: {
+    title: "Front view — elbows & rope",
+    frames: [
+      {
+        label: "Start — elbows pinned at sides",
+        pose: symPose({ ...STAND_FRONT, elbow: [42, 70], hand: [53, 60], cables: [[60, 0, 60, 52]], ropes: [[60, 52, 53, 60], [60, 52, 67, 60]] }),
+      },
+      {
+        label: "Bottom — pull the rope apart",
+        checkpoint: true,
+        pose: symPose({
+          ...STAND_FRONT, elbow: [42, 70], hand: [40, 98], cables: [[60, 0, 60, 76]], ropes: [[60, 76, 40, 98], [60, 76, 80, 98]],
+          ghost: ghostArms(40, [22, 64], "avoid: elbows flaring", [18, 10]),
+        }),
+      },
+    ],
+  },
+
+  // Face Pull
+  facePullFront: {
+    title: "Front view — elbow height",
+    frames: [
+      {
+        label: "Start — arms reaching to cable",
+        pose: symPose({ ...STAND_FRONT, elbow: [46, 52], hand: [53, 47], handles: [[53, 47, 67, 47]] }),
+      },
+      {
+        label: "Finish — elbows high, hands by ears",
+        checkpoint: true,
+        pose: symPose({
+          ...STAND_FRONT, elbow: [22, 42], hand: [36, 24],
+          ghost: ghostArms(40, [34, 74], "avoid: elbows dropping", [16, 10]),
+        }),
+      },
+    ],
+  },
+};
+Object.assign(POSE_FAMILIES, EXTRA_VIEW_FAMILIES);
+
+// Exercise name -> extra view families shown under the main diagram.
+const EXTRA_VIEWS = {
+  "Barbell Bench Press": ["benchTopBarbell"],
+  "Incline Barbell Bench Press": ["benchTopBarbell"],
+  "Close-Grip Bench Press": ["closeGripBenchTop"],
+  "Dumbbell Bench Press": ["benchTopDumbbell"],
+  "Incline Dumbbell Press": ["benchTopDumbbell"],
+  "Kettlebell Floor Press": ["benchTopDumbbell"],
+  "Push-Up": ["pushUpTop"],
+  "Diamond Push-Up": ["diamondPushUpTop"],
+  "Barbell Back Squat": ["squatFrontBar"],
+  "Front Squat": ["frontSquatFront"],
+  "Goblet Squat": ["gobletSquatFront"],
+  "Conventional Deadlift": ["deadliftFront"],
+  "Bulgarian Split Squat": ["lungeFront"],
+  "Dumbbell Walking Lunge": ["lungeFront"],
+  "Reverse Lunge": ["lungeFront"],
+  "Cable Triceps Pushdown": ["pushdownFrontBar"],
+  "Rope Triceps Pushdown": ["pushdownFrontRope"],
+  "Face Pull": ["facePullFront"],
+};
+
+
 const FORM_GUIDANCE_DB = {
   "Barbell Bench Press": {
     family: "pressLyingSide",
@@ -2507,10 +2898,24 @@ function buildFormGuidanceHTML(exerciseName) {
   // mistakes but no stick-figure diagram.
   const family = entry.family ? POSE_FAMILIES[entry.family] : null;
 
+  const stripHTML = (fam) =>
+    `<div class="frames">${fam.frames.map((frame, i) => renderFrame(frame, i)).join('<span class="arrow">&rarr;</span>')}</div>`;
+
   let framesHTML = "";
   if (family) {
-    const frameEls = family.frames.map((frame, i) => renderFrame(frame, i));
-    framesHTML = `<div class="frames">${frameEls.join('<span class="arrow">&rarr;</span>')}</div>`;
+    // Extra front/top views (grip width, elbow flare, knee tracking...) go
+    // under the main diagram; when present, each strip gets a view label.
+    const extras = (entry.views || EXTRA_VIEWS[exerciseName] || [])
+      .map((key) => POSE_FAMILIES[key])
+      .filter(Boolean);
+    if (extras.length) {
+      const mainTitle = /Front/.test(entry.family) ? "Front view" : "Side view";
+      framesHTML =
+        `<p class="view-label">${mainTitle}</p>${stripHTML(family)}` +
+        extras.map((fam) => `<p class="view-label">${fam.title || "Another angle"}</p>${stripHTML(fam)}`).join("");
+    } else {
+      framesHTML = stripHTML(family);
+    }
   }
 
   const mistakesHTML = entry.mistakes.map((m) => `<li>${m}</li>`).join("");
