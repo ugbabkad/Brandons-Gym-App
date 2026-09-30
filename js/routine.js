@@ -43,8 +43,54 @@ function pickExercise(muscleGroup, preferType, excludeNames) {
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
+// Free-text request parsing ("arms are sore, do legs"). Runs locally — no API.
+// Each clause is either an "avoid" (sore/skip/no/...) or a "focus" request.
+const REQUEST_GROUP_WORDS = [
+  [/\b(arms?|biceps?|triceps?)\b/, (w) => (w.startsWith("bi") ? ["biceps"] : w.startsWith("tri") ? ["triceps"] : ["biceps", "triceps"])],
+  [/\b(legs?|lower body|lower)\b/, () => ["quads", "hamstrings_glutes", "calves"]],
+  [/\b(quads?|quadriceps)\b/, () => ["quads"]],
+  [/\b(hamstrings?|glutes?|butt|hips?)\b/, () => ["hamstrings_glutes"]],
+  [/\b(calf|calves)\b/, () => ["calves"]],
+  [/\b(chest|pecs?)\b/, () => ["chest"]],
+  [/\b(back|lats?)\b/, () => ["back"]],
+  [/\b(shoulders?|delts?)\b/, () => ["shoulders"]],
+  [/\b(abs?|core)\b/, () => ["core"]],
+  [/\b(push)\b/, () => ["chest", "shoulders", "triceps"]],
+  [/\b(pull)\b/, () => ["back", "biceps"]],
+  [/\b(upper body|upper)\b/, () => ["chest", "back", "shoulders", "biceps", "triceps"]],
+];
+const REQUEST_AVOID_CUE = /\b(sore|soreness|tired|hurt|hurts|hurting|injured|injury|pain|avoid|skip|no|not|without|except|rest|resting|recover|recovering|tweaked|bugging|strained|dont|don't|nothing)\b/;
+
+function parseWorkoutRequest(text) {
+  const focus = [];
+  const avoid = [];
+  const clauses = String(text || "").toLowerCase().split(/[,;.!\n]|\bbut\b|\bso\b|\bthen\b|\binstead\b/);
+  for (const clause of clauses) {
+    const target = REQUEST_AVOID_CUE.test(clause) ? avoid : focus;
+    for (const [re, toKeys] of REQUEST_GROUP_WORDS) {
+      const m = clause.match(re);
+      if (!m) continue;
+      for (const k of toKeys(m[1])) if (!target.includes(k)) target.push(k);
+    }
+  }
+  return { focus: focus.filter((k) => !avoid.includes(k)), avoid };
+}
+
 // Returns { primaryGroups: [{key,label,daysSince}], exercises: [{name, muscleGroup, equipment, type}] }
-function generateRoutine() {
+// Asks Claude (via the Supabase "parse-request" edge function) to read the
+// request; falls back to the local keyword parser if offline or unavailable.
+async function resolveWorkoutRequest(text) {
+  if (!text.trim()) return { focus: [], avoid: [] };
+  try {
+    const { data, error } = await Cloud.client.functions.invoke("parse-request", { body: { text } });
+    if (!error && data && Array.isArray(data.focus) && Array.isArray(data.avoid)) return data;
+  } catch (e) {}
+  return parseWorkoutRequest(text);
+}
+
+// request: { focus: [...], avoid: [...] } muscle-group keys (optional).
+function generateRoutine(request) {
+  const { focus, avoid } = request || { focus: [], avoid: [] };
   const recency = Store.getMuscleGroupRecency();
   let ranked = rankMuscleGroups(recency);
 
@@ -58,7 +104,11 @@ function generateRoutine() {
     eligible = ranked;
   }
 
-  const primaryGroups = eligible.slice(0, PRIMARY_GROUP_COUNT);
+  eligible = eligible.filter((g) => !avoid.includes(g.key));
+  // Requested groups go first (ignoring recovery), then fill from the ranking.
+  const requested = ranked.filter((g) => focus.includes(g.key));
+  const rest = eligible.filter((g) => !focus.includes(g.key));
+  const primaryGroups = [...requested, ...rest].slice(0, PRIMARY_GROUP_COUNT);
   const exercises = [];
   const usedNames = new Set();
 

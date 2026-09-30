@@ -130,8 +130,9 @@ function swapExercise(name) {
 // DOM at all. Returns the full routine object ({primaryGroups, exercises})
 // so callers — e.g. the warm-up screen — can use primaryGroups (to pick
 // relevant mobility work) before the routine screen is ever shown.
-function generateAndStoreRoutine() {
-  const routine = generateRoutine();
+async function generateAndStoreRoutine() {
+  const request = await resolveWorkoutRequest(el("workout-request") ? el("workout-request").value : "");
+  const routine = generateRoutine(request);
   currentRoutine = routine.exercises;
   currentPrimaryGroups = routine.primaryGroups;
   return routine;
@@ -151,8 +152,8 @@ function showRoutineScreen() {
   el("chat-input").value = "";
 }
 
-function startWorkout() {
-  generateAndStoreRoutine();
+async function startWorkout() {
+  await generateAndStoreRoutine();
   showRoutineScreen();
 }
 

@@ -225,8 +225,8 @@ function skipWholeWarmup() {
 // Called from the "Warm Up" button. Generates today's routine up front (so
 // mobility picks can lean toward what it trains) but doesn't show it yet —
 // showRoutineScreen() (in app.js) is called once warm-up finishes or is skipped.
-function startWarmup() {
-  const routine = generateAndStoreRoutine();
+async function startWarmup() {
+  const routine = await generateAndStoreRoutine();
   warmupPlan = generateWarmupPlan(routine.primaryGroups.map((g) => g.key));
 
   el("start-screen").classList.add("hidden");

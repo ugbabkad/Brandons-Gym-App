@@ -1,6 +1,6 @@
 // Service worker: caches the app shell so the tracker works fully offline.
 // Bump CACHE_NAME whenever any cached file changes so clients pick up the update.
-const CACHE_NAME = "brandons-gym-app-v2";
+const CACHE_NAME = "brandons-gym-app-v4";
 const APP_SHELL = [
   "./",
   "./index.html",

@@ -578,3 +578,16 @@ main {
   font-style: italic;
   color: var(--text-dim);
 }
+
+.request-box {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+  background: var(--surface, transparent);
+  border: 1px solid var(--border, #444);
+  border-radius: 10px;
+  resize: none;
+}
