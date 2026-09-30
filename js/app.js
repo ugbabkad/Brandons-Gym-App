@@ -94,6 +94,8 @@ function buildExerciseCard(exercise) {
   }
   card.appendChild(setsWrap);
 
+  card.appendChild(buildCoachBox(card, exercise, suggestion));
+
   if (typeof hasFormGuidance === "function" && hasFormGuidance(exercise.name)) {
     const formWrap = document.createElement("div");
     formWrap.innerHTML = buildFormGuidanceHTML(exercise.name);
@@ -101,6 +103,62 @@ function buildExerciseCard(exercise) {
   }
 
   return card;
+}
+
+// Plain-text summary of this exercise's state, sent to the coach with a question.
+function buildCoachContext(card, exercise, suggestion) {
+  const lines = [`Exercise: ${exercise.name} (${exercise.equipment}, ${muscleLabel(exercise.muscleGroup)})`];
+  lines.push(`Suggested today: ${suggestion.note}`);
+  const last = Store.getLastForExercise(exercise.name);
+  if (last) {
+    const sets = last.sets.map((s) => (s.weight != null ? `${s.reps}@${s.weight}lb` : `${s.reps} reps`)).join(", ");
+    lines.push(`Last time (${String(last.date).slice(0, 10)}): ${sets}`);
+  }
+  const done = [];
+  card.querySelectorAll(".set-row").forEach((row) => {
+    const reps = row.querySelector(".reps-input").value;
+    const w = row.querySelector(".weight-input");
+    if (reps !== "") done.push(`set ${row.dataset.setNumber}: ${reps} reps${w && w.value !== "" ? ` @ ${w.value}lb` : ""}`);
+  });
+  lines.push(done.length ? `Logged so far today: ${done.join("; ")}` : "Nothing logged yet today for this exercise.");
+  return lines.join("\n");
+}
+
+function buildCoachBox(card, exercise, suggestion) {
+  const wrap = document.createElement("div");
+  wrap.className = "coach-box";
+  wrap.innerHTML = `
+    <div class="chat-row">
+      <input type="text" class="coach-input" placeholder="Ask coach: add weight? shoulder hurts?" autocomplete="off" />
+      <button class="coach-send">Ask</button>
+    </div>
+    <div class="chat-reply coach-reply"></div>
+  `;
+  const input = wrap.querySelector(".coach-input");
+  const reply = wrap.querySelector(".coach-reply");
+  const btn = wrap.querySelector(".coach-send");
+  async function ask() {
+    const question = input.value.trim();
+    if (!question) return;
+    btn.disabled = true;
+    reply.textContent = "Thinking…";
+    try {
+      const { data, error } = await Cloud.client.functions.invoke("coach", {
+        body: { question, context: buildCoachContext(card, exercise, suggestion) },
+      });
+      if (error || !data || !data.reply) throw error || new Error("no reply");
+      reply.textContent = data.reply;
+      input.value = "";
+    } catch (e) {
+      reply.textContent = "Couldn't reach the coach right now. Check your connection and try again.";
+    }
+    btn.disabled = false;
+  }
+  btn.addEventListener("click", ask);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") ask();
+  });
+  return wrap;
 }
 
 function renderExerciseList() {

@@ -591,3 +591,6 @@ main {
   border-radius: 10px;
   resize: none;
 }
+
+.coach-box { margin-top: 10px; }
+.coach-reply { color: var(--text); }
