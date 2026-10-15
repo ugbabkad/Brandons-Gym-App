@@ -94,6 +94,14 @@ function buildExerciseCard(exercise) {
   }
   card.appendChild(setsWrap);
 
+  const last = Store.getLastForExercise(exercise.name);
+  if (last && last.note) {
+    const lastNote = document.createElement("p");
+    lastNote.className = "last-note";
+    lastNote.textContent = `Last note: ${last.note}`;
+    card.appendChild(lastNote);
+  }
+
   card.appendChild(buildCoachBox(card, exercise, suggestion));
 
   if (typeof hasFormGuidance === "function" && hasFormGuidance(exercise.name)) {
@@ -120,6 +128,10 @@ function buildCoachContext(card, exercise, suggestion) {
     const w = row.querySelector(".weight-input");
     if (reps !== "") done.push(`set ${row.dataset.setNumber}: ${reps} reps${w && w.value !== "" ? ` @ ${w.value}lb` : ""}`);
   });
+  if (last && last.note) lines.push(`Your note from last time: ${last.note}`);
+  const active = Store.getActive();
+  const todays = active && active.exercises.find((e) => e.name === exercise.name);
+  if (todays && todays.note) lines.push(`Your note today: ${todays.note}`);
   lines.push(done.length ? `Logged so far today: ${done.join("; ")}` : "Nothing logged yet today for this exercise.");
   return lines.join("\n");
 }
@@ -129,11 +141,14 @@ function buildCoachBox(card, exercise, suggestion) {
   wrap.className = "coach-box";
   wrap.innerHTML = `
     <div class="chat-row">
-      <input type="text" class="coach-input" placeholder="Ask coach: add weight? shoulder hurts?" autocomplete="off" />
+      <input type="text" class="coach-input" placeholder="Ask coach, or jot a note: felt hard, do more often" autocomplete="off" />
       <button class="coach-send">Ask</button>
+      <button class="coach-note secondary-btn">Note</button>
     </div>
     <div class="chat-reply coach-reply"></div>
   `;
+  const savedNote = (Store.getActive()?.exercises.find((e) => e.name === exercise.name) || {}).note;
+  if (savedNote) wrap.querySelector(".coach-reply").textContent = `Note saved: ${savedNote}`;
   const input = wrap.querySelector(".coach-input");
   const reply = wrap.querySelector(".coach-reply");
   const btn = wrap.querySelector(".coach-send");
@@ -154,7 +169,18 @@ function buildCoachBox(card, exercise, suggestion) {
     }
     btn.disabled = false;
   }
+  // Notes need no network or AI: they save straight to this exercise.
+  function saveNote() {
+    const text = input.value.trim();
+    if (!text) return;
+    const active = Store.getActive();
+    const existing = (active && active.exercises.find((e) => e.name === exercise.name) || {}).note;
+    Store.saveNote(exercise.name, existing ? `${existing}; ${text}` : text);
+    reply.textContent = `Note saved: ${existing ? `${existing}; ${text}` : text}`;
+    input.value = "";
+  }
   btn.addEventListener("click", ask);
+  wrap.querySelector(".coach-note").addEventListener("click", saveNote);
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") ask();
   });
@@ -181,7 +207,12 @@ function swapExercise(name) {
   }
   currentRoutine[idx] = replacement;
   Store.replaceExercise(exercise.name, replacement);
-  renderExerciseList();
+  // Swap just this card in place so sets typed into the other cards survive.
+  const oldCard = document.querySelector(
+    `#exercise-list .exercise-card[data-exercise-name="${CSS.escape(exercise.name)}"]`
+  );
+  if (oldCard) oldCard.replaceWith(buildExerciseCard(replacement));
+  else renderExerciseList();
 }
 
 // Generates today's routine and stores it in state, but does not touch the
@@ -319,7 +350,8 @@ function renderHistory() {
         const setStr = hasWeight
           ? ex.sets.map((s) => `${s.weight}x${s.reps}`).join(", ")
           : ex.sets.map((s) => `${s.reps} reps`).join(", ");
-        return `<p class="history-exercise"><strong>${ex.name}</strong>: ${setStr}</p>`;
+        const noteStr = ex.note ? `<br><em>Note: ${escapeHtml(ex.note)}</em>` : "";
+        return `<p class="history-exercise"><strong>${ex.name}</strong>: ${setStr}${noteStr}</p>`;
       })
       .join("");
     const notesLine = session.notes ? `<p class="history-notes">${escapeHtml(session.notes)}</p>` : "";

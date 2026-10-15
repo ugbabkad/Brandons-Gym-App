@@ -135,7 +135,7 @@ const Store = {
               return o;
             }),
         }))
-        .filter((e) => e.sets.length),
+        .filter((e) => e.sets.length || e.note),
     };
   },
 
@@ -152,6 +152,7 @@ const Store = {
         equipment: e.equipment,
         weightMeaning: e.weight_meaning,
         targetReps: e.target_reps,
+        note: e.note || null,
         sets: (e.sets || []).map((s) => ({
           setNumber: s.set_number,
           weight: s.weight === null || s.weight === undefined ? null : Number(s.weight),
@@ -212,6 +213,7 @@ const Store = {
       equipment: ex.equipment || null,
       weightMeaning: (meta && meta.weightMeaning) || ex.weightMeaning || "load",
       targetReps: suggestNext(ex).targetReps,
+      note: null,
       sets: [],
     };
   },
@@ -226,6 +228,7 @@ const Store = {
       equipment: e.equipment || null,
       weight_meaning: e.weightMeaning || "load",
       target_reps: e.targetReps ?? null,
+      note: e.note || null,
     };
   },
 
@@ -284,6 +287,18 @@ const Store = {
     });
   },
 
+  // Saves a free-text note on an exercise in the active workout ("" clears it).
+  saveNote(name, text) {
+    const a = this._active;
+    const e = a && a.exercises.find((x) => x.name === name);
+    if (!e) return;
+    e.note = text || null;
+    this._enqueue(async () => {
+      const { error } = await Cloud.client.from("session_exercises").update({ note: e.note }).eq("id", e.id);
+      if (error) throw error;
+    });
+  },
+
   replaceExercise(oldName, newExercise) {
     const a = this._active;
     if (!a) return;
@@ -319,7 +334,10 @@ const Store = {
         const r = byName.get(e.name);
         const sets = r ? r.sets : [];
         if (!sets.length) {
-          const del = await Cloud.client.from("session_exercises").delete().eq("id", e.id);
+          // Skipped exercise: drop it unless it carries a note worth keeping.
+          const del = e.note
+            ? await Cloud.client.from("sets").delete().eq("session_exercise_id", e.id)
+            : await Cloud.client.from("session_exercises").delete().eq("id", e.id);
           if (del.error) throw del.error;
           continue;
         }
@@ -355,15 +373,17 @@ const Store = {
       notes: null,
       cardio: null,
       exercises: rows
-        .filter((r) => r.sets.length)
+        .filter((r) => r.sets.length || (a.exercises.find((e) => e.name === r.name) || {}).note)
         .map((r) => {
           const meta = exerciseMeta(r.name);
+          const active = a.exercises.find((e) => e.name === r.name);
           return {
             name: r.name,
             muscleGroup: r.muscleGroup,
             equipment: (meta && meta.equipment) || null,
             weightMeaning: (meta && meta.weightMeaning) || "load",
             targetReps: r.targetReps,
+            note: (active && active.note) || null,
             sets: r.sets.map((s) => {
               const o = { reps: s.reps };
               if (s.weight !== undefined) o.weight = s.weight;

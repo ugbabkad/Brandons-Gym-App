@@ -594,3 +594,10 @@ main {
 
 .coach-box { margin-top: 10px; }
 .coach-reply { color: var(--text); }
+
+.last-note {
+  font-size: 0.85rem;
+  font-style: italic;
+  opacity: 0.8;
+  margin: 6px 0 0;
+}
