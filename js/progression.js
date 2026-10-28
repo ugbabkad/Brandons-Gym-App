@@ -19,14 +19,39 @@ const BODYWEIGHT_DEFAULTS = { sets: 3, incrementReps: 1 };
 // Kettlebells come in fixed sizes (roughly 18/26/35/44/53 lb), so a +5 lb
 // suggestion isn't loadable. Suggest the next bell size up instead.
 const KETTLEBELL_INCREMENT_LBS = 9;
+// Exercises flagged unit: "kg" in db.js (e.g. Goblet Squat) are logged in kilograms;
+// kettlebell bells in kg step 8/12/16/20/24/28/32, so go up one bell (4 kg).
+const KETTLEBELL_INCREMENT_KG = 4;
 
-function suggestNext(exercise) {
+function suggestNext(exercise, intensity) {
+  const s = suggestNextBase(exercise);
+  if (!s || !s.sets) return s;
+  // Pre-workout request: "light" = one fewer set and no weight increase; "heavy" = one extra set.
+  if (intensity === "light") {
+    s.sets = Math.max(2, s.sets - 1);
+    if (s.heldWeight != null) {
+      s.weight = s.heldWeight;
+      s.note = `Light day — hold at ${s.heldWeight} ${exercise.unit === "kg" ? "kg" : "lbs"}, one fewer set.`;
+    } else {
+      s.note += " (Light day: one fewer set.)";
+    }
+  } else if (intensity === "heavy") {
+    s.sets = Math.min(6, s.sets + 1);
+    s.note += " (Heavy day: one extra set.)";
+  }
+  return s;
+}
+
+function suggestNextBase(exercise) {
   if (exercise.equipment === "bodyweight") return suggestNextBodyweight(exercise);
 
   const defaults = DEFAULTS_BY_TYPE[exercise.type] || DEFAULTS_BY_TYPE.isolation;
   const last = Store.getLastForExercise(exercise.name);
+  const unit = exercise.unit === "kg" ? "kg" : "lbs";
   const incrementLbs =
-    exercise.equipment === "kettlebell" ? KETTLEBELL_INCREMENT_LBS : defaults.incrementLbs;
+    exercise.equipment === "kettlebell"
+      ? (unit === "kg" ? KETTLEBELL_INCREMENT_KG : KETTLEBELL_INCREMENT_LBS)
+      : defaults.incrementLbs;
 
   if (!last || !last.sets || !last.sets.length) {
     return {
@@ -58,7 +83,7 @@ function suggestNext(exercise) {
       note:
         next === lastWeight
           ? `Hit all ${targetReps} reps with no assistance — try the unassisted version.`
-          : `Hit all ${targetReps} reps last time — try ${incrementLbs} lbs LESS assistance.`,
+          : `Hit all ${targetReps} reps last time — try ${incrementLbs} ${unit} LESS assistance.`,
       isFirstTime: false,
     };
   }
@@ -66,9 +91,10 @@ function suggestNext(exercise) {
   if (hitAll) {
     return {
       weight: lastWeight + incrementLbs,
+      heldWeight: lastWeight,
       sets: last.sets.length,
       targetReps,
-      note: `Hit all ${targetReps} reps last time — try +${incrementLbs} lbs.`,
+      note: `Hit all ${targetReps} reps last time — try +${incrementLbs} ${unit}.`,
       isFirstTime: false,
     };
   }

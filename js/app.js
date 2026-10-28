@@ -4,6 +4,7 @@
 
 let currentRoutine = null; // array of exercise objects in the active session
 let currentPrimaryGroups = null; // primaryGroups from the last generated routine (for the focus banner)
+let currentRequest = null; // parsed pre-workout request (muscle groups, equipment, length, intensity, text)
 let lastFocusedExercise = null; // name of the exercise whose input was last focused (for chat commands)
 
 const el = (id) => document.getElementById(id);
@@ -33,8 +34,22 @@ function renderFocusBanner(primaryGroups) {
   el("routine-focus").innerHTML = `<strong>Today's focus:</strong> ${parts.join(", ")}`;
 }
 
+// Shows what the pre-workout request changed, so it's clear it was understood.
+function renderRequestSummary() {
+  const r = currentRequest;
+  if (!r || !r.text) return;
+  const bits = [];
+  if (r.focus.length) bits.push(`focus: ${r.focus.map(muscleLabel).join(", ")}`);
+  if (r.avoid.length) bits.push(`avoiding: ${r.avoid.map(muscleLabel).join(", ")}`);
+  if (r.avoidEquipment.length) bits.push(`no ${r.avoidEquipment.join(" / ")}`);
+  if (r.exerciseCount) bits.push(`${r.exerciseCount} exercises`);
+  if (r.intensity !== "normal") bits.push(`${r.intensity} day`);
+  const summary = bits.length ? bits.join(" · ") : "nothing I could act on, but the coach can see it";
+  el("routine-focus").innerHTML += `<br><span class="request-applied">Your request "${escapeHtml(r.text)}" → ${escapeHtml(summary)}</span>`;
+}
+
 function buildExerciseCard(exercise) {
-  const suggestion = suggestNext(exercise);
+  const suggestion = suggestNext(exercise, currentRequest ? currentRequest.intensity : "normal");
   const card = document.createElement("div");
   card.className = "exercise-card";
   card.dataset.exerciseName = exercise.name;
@@ -78,7 +93,7 @@ function buildExerciseCard(exercise) {
     `
       : `
       <span class="set-index">${i + 1}</span>
-      <input type="number" inputmode="decimal" class="weight-input" placeholder="lbs" value="${suggestion.weight ?? ""}" />
+      <input type="number" inputmode="decimal" class="weight-input" placeholder="${exercise.unit === "kg" ? "kg" : "lbs"}" value="${suggestion.weight ?? ""}" />
       <input type="number" inputmode="numeric" class="reps-input" placeholder="reps" />
       <span class="set-target">${targetLabel}</span>
     `;
@@ -119,16 +134,17 @@ function buildCoachContext(card, exercise, suggestion) {
   lines.push(`Suggested today: ${suggestion.note}`);
   const last = Store.getLastForExercise(exercise.name);
   if (last) {
-    const sets = last.sets.map((s) => (s.weight != null ? `${s.reps}@${s.weight}lb` : `${s.reps} reps`)).join(", ");
+    const sets = last.sets.map((s) => (s.weight != null ? `${s.reps}@${s.weight}${exercise.unit === "kg" ? "kg" : "lb"}` : `${s.reps} reps`)).join(", ");
     lines.push(`Last time (${String(last.date).slice(0, 10)}): ${sets}`);
   }
   const done = [];
   card.querySelectorAll(".set-row").forEach((row) => {
     const reps = row.querySelector(".reps-input").value;
     const w = row.querySelector(".weight-input");
-    if (reps !== "") done.push(`set ${row.dataset.setNumber}: ${reps} reps${w && w.value !== "" ? ` @ ${w.value}lb` : ""}`);
+    if (reps !== "") done.push(`set ${row.dataset.setNumber}: ${reps} reps${w && w.value !== "" ? ` @ ${w.value}${exercise.unit === "kg" ? "kg" : "lb"}` : ""}`);
   });
   if (last && last.note) lines.push(`Your note from last time: ${last.note}`);
+  if (currentRequest && currentRequest.text) lines.push(`Lifter's request for today's workout: ${currentRequest.text}`);
   const active = Store.getActive();
   const todays = active && active.exercises.find((e) => e.name === exercise.name);
   if (todays && todays.note) lines.push(`Your note today: ${todays.note}`);
@@ -198,9 +214,10 @@ function swapExercise(name) {
   if (idx === -1) return;
   const exercise = currentRoutine[idx];
   const excludeNames = new Set(currentRoutine.map((e) => e.name));
+  const avoidEq = currentRequest ? currentRequest.avoidEquipment : [];
   const replacement =
-    pickExercise(exercise.muscleGroup, exercise.type, excludeNames) ||
-    pickExercise(exercise.muscleGroup, exercise.type === "compound" ? "isolation" : "compound", excludeNames);
+    pickExercise(exercise.muscleGroup, exercise.type, excludeNames, avoidEq) ||
+    pickExercise(exercise.muscleGroup, exercise.type === "compound" ? "isolation" : "compound", excludeNames, avoidEq);
   if (!replacement) {
     alert("No other exercises available for this muscle group.");
     return;
@@ -222,6 +239,8 @@ function swapExercise(name) {
 async function generateAndStoreRoutine() {
   const request = await resolveWorkoutRequest(el("workout-request") ? el("workout-request").value : "");
   const routine = generateRoutine(request);
+  currentRequest = request;
+  try { localStorage.setItem("gym.todayRequest", JSON.stringify(request)); } catch (e) {}
   currentRoutine = routine.exercises;
   currentPrimaryGroups = routine.primaryGroups;
   return routine;
@@ -233,6 +252,7 @@ async function generateAndStoreRoutine() {
 function showRoutineScreen() {
   if (!Store.getActive()) Store.beginSession(currentRoutine);
   renderFocusBanner(currentPrimaryGroups);
+  renderRequestSummary();
   renderExerciseList();
   el("start-screen").classList.add("hidden");
   if (el("warmup-screen")) el("warmup-screen").classList.add("hidden");
@@ -324,6 +344,8 @@ async function finishWorkout() {
 function resetToStartScreen() {
   currentRoutine = null;
   currentPrimaryGroups = null;
+  currentRequest = null;
+  try { localStorage.removeItem("gym.todayRequest"); } catch (e) {}
   el("routine-screen").classList.add("hidden");
   el("start-screen").classList.remove("hidden");
 }
@@ -460,6 +482,7 @@ function resumeActiveWorkout() {
         type: "isolation",
       }
   );
+  try { currentRequest = JSON.parse(localStorage.getItem("gym.todayRequest") || "null"); } catch (e) { currentRequest = null; }
   const recency = Store.getMuscleGroupRecency();
   currentPrimaryGroups = [...new Set(currentRoutine.map((e) => e.muscleGroup))].map((key) => ({
     label: muscleLabel(key),

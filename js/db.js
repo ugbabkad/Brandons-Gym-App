@@ -61,7 +61,7 @@ const EXERCISE_DB = [
   { name: "Bulgarian Split Squat", muscleGroup: "quads", equipment: "dumbbell", type: "compound" },
   { name: "Leg Extension", muscleGroup: "quads", equipment: "machine", type: "isolation" },
   { name: "Front Squat", muscleGroup: "quads", equipment: "barbell", type: "compound" },
-  { name: "Goblet Squat", muscleGroup: "quads", equipment: "kettlebell", type: "compound" },
+  { name: "Goblet Squat", muscleGroup: "quads", equipment: "kettlebell", type: "compound", unit: "kg" },
   { name: "Hack Squat", muscleGroup: "quads", equipment: "machine", type: "compound" },
   { name: "Dumbbell Walking Lunge", muscleGroup: "quads", equipment: "dumbbell", type: "compound" },
   { name: "Reverse Lunge", muscleGroup: "quads", equipment: "bodyweight", type: "compound" },
