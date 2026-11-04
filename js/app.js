@@ -3,6 +3,7 @@
 // global functions/constants before this file runs.
 
 let currentRoutine = null; // array of exercise objects in the active session
+let currentDayLabel = null; // e.g. "Back + Biceps", from the last generated routine
 let currentPrimaryGroups = null; // primaryGroups from the last generated routine (for the focus banner)
 let currentRequest = null; // parsed pre-workout request (muscle groups, equipment, length, intensity, text)
 let lastFocusedExercise = null; // name of the exercise whose input was last focused (for chat commands)
@@ -31,7 +32,8 @@ function renderFocusBanner(primaryGroups) {
     const recency = g.daysSince === null ? "never trained" : `${g.daysSince}d ago`;
     return `${g.label} (${recency})`;
   });
-  el("routine-focus").innerHTML = `<strong>Today's focus:</strong> ${parts.join(", ")}`;
+  const title = currentDayLabel ? `${currentDayLabel} day` : "Today's focus";
+  el("routine-focus").innerHTML = `<strong>${escapeHtml(title)}:</strong> ${parts.join(", ")}`;
 }
 
 // Shows what the pre-workout request changed, so it's clear it was understood.
@@ -40,6 +42,7 @@ function renderRequestSummary() {
   if (!r || !r.text) return;
   const bits = [];
   if (r.focus.length) bits.push(`focus: ${r.focus.map(muscleLabel).join(", ")}`);
+  if (r.exercises && r.exercises.length) bits.push(`included: ${r.exercises.join(", ")}`);
   if (r.avoid.length) bits.push(`avoiding: ${r.avoid.map(muscleLabel).join(", ")}`);
   if (r.avoidEquipment.length) bits.push(`no ${r.avoidEquipment.join(" / ")}`);
   if (r.exerciseCount) bits.push(`${r.exerciseCount} exercises`);
@@ -243,6 +246,7 @@ async function generateAndStoreRoutine() {
   try { localStorage.setItem("gym.todayRequest", JSON.stringify(request)); } catch (e) {}
   currentRoutine = routine.exercises;
   currentPrimaryGroups = routine.primaryGroups;
+  currentDayLabel = routine.dayLabel;
   return routine;
 }
 
@@ -344,6 +348,7 @@ async function finishWorkout() {
 function resetToStartScreen() {
   currentRoutine = null;
   currentPrimaryGroups = null;
+  currentDayLabel = null;
   currentRequest = null;
   try { localStorage.removeItem("gym.todayRequest"); } catch (e) {}
   el("routine-screen").classList.add("hidden");

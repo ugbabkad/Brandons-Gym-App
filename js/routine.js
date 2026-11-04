@@ -6,9 +6,15 @@
 // minimum recovery window so a group hit yesterday isn't hit again today.
 
 const TARGET_EXERCISE_COUNT = 5; // ~30-40 min at full-gym pace
-const PRIMARY_GROUP_COUNT = 3; // how many muscle groups the session centers on
+
+// Workout days: each session is one of these regular combos. `groups` maps a
+// muscle group to its relative share of the session's exercises.
+const WORKOUT_DAYS = [
+  { label: "Back + Biceps", groups: { back: 3, biceps: 2 } },
+  { label: "Chest + Triceps", groups: { chest: 3, triceps: 2, shoulders: 1 } },
+  { label: "Legs", groups: { quads: 2, hamstrings_glutes: 2, calves: 1, core: 1 } },
+];
 const MIN_RECOVERY_DAYS = 2; // don't re-hit a group trained more recently than this...
-const RECOVERY_FALLBACK_DAYS = 2; // ...unless literally everything is under-recovered
 
 function shuffle(arr) {
   const a = arr.slice();
@@ -125,9 +131,83 @@ function parseRequestModifiers(text) {
   return { avoidEquipment, exerciseCount, intensity };
 }
 
+// Lowercase, hyphens/punctuation to spaces, naive singularizing ("pull-ups" -> "pull up").
+function normalizeWords(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => (w.length > 2 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w))
+    .join(" ");
+}
+
+// Short names people actually say, for exercises whose full name is longer.
+const EXERCISE_ALIASES = {
+  "bench press": "Barbell Bench Press",
+  bench: "Barbell Bench Press",
+  squat: "Barbell Back Squat",
+  deadlift: "Conventional Deadlift",
+  rdl: "Romanian Deadlift",
+  "overhead press": "Overhead Barbell Press",
+  ohp: "Overhead Barbell Press",
+  "shoulder press": "Seated Dumbbell Shoulder Press",
+  "row": "Barbell Row",
+  pulldown: "Lat Pulldown",
+  "lat pull down": "Lat Pulldown",
+  "pull up": "Pull-Up",
+  pullup: "Pull-Up",
+  "chin up": "Chin-Up",
+  "assisted pullup": "Assisted Pull-Up Machine",
+  "assisted dip": "Assisted Dip Machine",
+  dip: "Dips",
+  "push up": "Push-Up",
+  pushup: "Push-Up",
+  pushdown: "Cable Triceps Pushdown",
+  "tricep pushdown": "Cable Triceps Pushdown",
+  "skullcrusher": "Skull Crusher",
+  "leg curl": "Lying Leg Curl",
+  "calf raise": "Standing Calf Raise",
+  "lateral raise": "Lateral Raise",
+  "side raise": "Lateral Raise",
+  fly: "Cable Fly",
+  "hip thrust": "Hip Thrust",
+  "lunge": "Dumbbell Walking Lunge",
+  "curl": "Dumbbell Curl",
+  "bicep curl": "Dumbbell Curl",
+};
+
+// Finds specific exercises named in the request. Longest names match first and
+// consume their words, so "assisted pull ups" gives the assisted machine, not
+// also plain Pull-Up. A clause with an avoid cue ("no pull ups") blocks instead.
+function parseNamedExercises(text) {
+  const candidates = [];
+  for (const e of EXERCISE_DB) {
+    candidates.push([normalizeWords(e.name.replace(/\bmachine\b/i, "")), e.name]);
+    candidates.push([normalizeWords(e.name), e.name]);
+  }
+  for (const [alias, name] of Object.entries(EXERCISE_ALIASES)) candidates.push([normalizeWords(alias), name]);
+  candidates.sort((a, b) => b[0].length - a[0].length);
+
+  const want = [];
+  const block = [];
+  for (const clause of String(text || "").toLowerCase().split(/[,;.!\n]|\bbut\b|\bthen\b|\binstead\b/)) {
+    let rest = " " + normalizeWords(clause) + " ";
+    const target = REQUEST_AVOID_CUE.test(clause) ? block : want;
+    for (const [phrase, name] of candidates) {
+      if (!phrase) continue;
+      const needle = " " + phrase + " ";
+      if (!rest.includes(needle)) continue;
+      rest = rest.split(needle).join(" ");
+      if (!target.includes(name)) target.push(name);
+    }
+  }
+  return want.filter((n) => !block.includes(n));
+}
+
 // Always resolves to { focus, avoid, avoidEquipment, exerciseCount, intensity, text }.
 async function resolveWorkoutRequest(text) {
-  const empty = { focus: [], avoid: [], avoidEquipment: [], exerciseCount: null, intensity: "normal", text: "" };
+  const empty = { focus: [], avoid: [], avoidEquipment: [], exerciseCount: null, intensity: "normal", exercises: [], text: "" };
   if (!String(text || "").trim()) return empty;
   const local = parseRequestModifiers(text);
   let base = null;
@@ -144,67 +224,116 @@ async function resolveWorkoutRequest(text) {
   const n = Number(base.exerciseCount);
   const exerciseCount = Number.isInteger(n) && n >= 3 && n <= 8 ? n : local.exerciseCount;
   const intensity = ["light", "normal", "heavy"].includes(base.intensity) ? base.intensity : local.intensity;
-  return { focus: base.focus, avoid: base.avoid, avoidEquipment, exerciseCount, intensity, text: String(text).trim() };
+  const exercises = parseNamedExercises(text);
+  return { focus: base.focus, avoid: base.avoid, avoidEquipment, exerciseCount, intensity, exercises, text: String(text).trim() };
 }
 
-// request: { focus: [...], avoid: [...] } muscle-group keys (optional).
+// Splits `n` slots across weighted groups (largest remainder, ties random).
+function allocateSlots(weights, n) {
+  const keys = shuffle(Object.keys(weights));
+  const total = keys.reduce((t, k) => t + weights[k], 0);
+  const out = {};
+  let used = 0;
+  for (const k of keys) {
+    out[k] = Math.floor((weights[k] * n) / total);
+    used += out[k];
+  }
+  const byRemainder = keys
+    .slice()
+    .sort((a, b) => ((weights[b] * n) / total) % 1 - ((weights[a] * n) / total) % 1);
+  for (let i = 0; used < n && i < byRemainder.length; i++, used++) out[byRemainder[i]]++;
+  return out;
+}
+
+// Picks today's session type: the regular combo (back+biceps, chest+triceps,
+// legs) that has gone longest without being trained and is recovered.
+function chooseWorkoutDay(recency, avoid) {
+  const scored = shuffle(WORKOUT_DAYS).map((day) => {
+    const keys = Object.keys(day.groups).filter((k) => !avoid.includes(k));
+    const days = keys.map((k) => (recency[k] ? recency[k].daysSince : 30));
+    const lost = Object.keys(day.groups).filter((k) => avoid.includes(k)).reduce((t, k) => t + day.groups[k], 0);
+    const total = Object.values(day.groups).reduce((t, w) => t + w, 0);
+    return {
+      day,
+      score: days.length ? days.reduce((t, d) => t + Math.min(d, 30), 0) / days.length : -1,
+      recovered: days.length > 0 && Math.min(...days) >= MIN_RECOVERY_DAYS,
+      usable: lost / total < 0.5,
+    };
+  });
+  const pool = scored.filter((d) => d.usable);
+  const recovered = pool.filter((d) => d.recovered);
+  return (recovered.length ? recovered : pool.length ? pool : scored).sort((a, b) => b.score - a.score)[0].day;
+}
+
+// request: { focus, avoid, avoidEquipment, exerciseCount, intensity, exercises }.
 function generateRoutine(request) {
-  const { focus, avoid } = request || { focus: [], avoid: [] };
-  const avoidEquipment = (request && request.avoidEquipment) || [];
-  const targetCount = (request && request.exerciseCount) || TARGET_EXERCISE_COUNT;
+  const req = request || {};
+  const avoid = req.avoid || [];
+  const avoidEquipment = req.avoidEquipment || [];
+  const named = (req.exercises || []).map(exerciseMeta).filter(Boolean);
+  const targetCount = Math.max(req.exerciseCount || TARGET_EXERCISE_COUNT, named.length);
   const recency = Store.getMuscleGroupRecency();
-  let ranked = rankMuscleGroups(recency);
 
-  let eligible = ranked.filter(
-    (g) => g.daysSince === Infinity || g.daysSince >= MIN_RECOVERY_DAYS
-  );
-  // Fallback: if recovery filtering leaves too few groups to build a session
-  // (e.g. brand-new user, or trained every group recently), just use the
-  // least-recently-trained groups regardless of the recovery window.
-  if (eligible.length < PRIMARY_GROUP_COUNT) {
-    eligible = ranked;
+  // Groups the lifter asked for, directly or by naming an exercise.
+  const focus = [...new Set([...(req.focus || []), ...named.map((e) => e.muscleGroup)])].filter((k) => !avoid.includes(k));
+  let weights;
+  let label;
+  if (focus.length) {
+    const home = WORKOUT_DAYS.filter((d) => focus.every((k) => k in d.groups));
+    if (home.length) {
+      // Everything asked for lives in one regular combo: run that whole day.
+      weights = { ...home[0].groups };
+      label = home[0].label;
+      for (const k of focus) weights[k] = Math.max(weights[k], 3);
+    } else {
+      weights = Object.fromEntries(focus.map((k) => [k, 2]));
+      label = focus.map(muscleLabel).join(" + ");
+    }
+  } else {
+    const day = chooseWorkoutDay(recency, avoid);
+    weights = { ...day.groups };
+    label = day.label;
   }
+  for (const k of avoid) delete weights[k];
 
-  eligible = eligible.filter((g) => !avoid.includes(g.key));
-  // Requested groups go first (ignoring recovery), then fill from the ranking.
-  const requested = ranked.filter((g) => focus.includes(g.key));
-  const rest = eligible.filter((g) => !focus.includes(g.key));
-  const primaryGroups = [...requested, ...rest].slice(0, PRIMARY_GROUP_COUNT);
-  const exercises = [];
-  const usedNames = new Set();
+  const slots = allocateSlots(weights, targetCount);
+  const exercises = [...named];
+  const usedNames = new Set(named.map((e) => e.name));
+  for (const e of named) if (slots[e.muscleGroup] > 0) slots[e.muscleGroup]--;
 
-  // Pass 1: one compound (or best available) exercise per primary group.
-  for (const g of primaryGroups) {
-    const lastForGroup = Store.getLastForExercise; // not used directly here
-    const ex = pickExercise(g.key, "compound", usedNames, avoidEquipment);
+  const groupKeys = Object.keys(weights).sort((a, b) => weights[b] - weights[a]);
+  for (const k of groupKeys) {
+    const total = slots[k];
+    for (let j = 0; j < total; j++) {
+      const prefer = k !== "core" && j < Math.round(total * 0.67) ? "compound" : "isolation";
+      const ex = pickExercise(k, prefer, usedNames, avoidEquipment) || pickExercise(k, prefer, usedNames, []);
+      if (ex) {
+        exercises.push(ex);
+        usedNames.add(ex.name);
+      }
+    }
+  }
+  // A group ran out of exercises: top up from the others in the day.
+  for (let guard = 0; exercises.length < targetCount && guard < 20; guard++) {
+    const k = groupKeys[guard % groupKeys.length];
+    const ex = pickExercise(k, "isolation", usedNames, avoidEquipment);
     if (ex) {
       exercises.push(ex);
       usedNames.add(ex.name);
     }
   }
+  // Heavy compound lifts first, isolation work after.
+  exercises.sort((a, b) => (a.type === "compound" ? 0 : 1) - (b.type === "compound" ? 0 : 1));
 
-  // Pass 2: round out to TARGET_EXERCISE_COUNT, cycling back through the
-  // primary groups, preferring isolation work now that compounds are placed.
-  let i = 0;
-  if (exercises.length > targetCount) exercises.length = targetCount;
-  while (exercises.length < targetCount && primaryGroups.length) {
-    const g = primaryGroups[i % primaryGroups.length];
-    const ex = pickExercise(g.key, "isolation", usedNames, avoidEquipment);
-    if (ex) {
-      exercises.push(ex);
-      usedNames.add(ex.name);
-    }
-    i++;
-    if (i > primaryGroups.length * 4) break; // safety valve, pool exhausted
-  }
-
+  const present = [...new Set(exercises.map((e) => e.muscleGroup))];
   return {
-    primaryGroups: primaryGroups.map((g) => ({
-      key: g.key,
-      label: g.label,
-      daysSince: g.daysSince === Infinity ? null : g.daysSince,
+    dayLabel: label,
+    primaryGroups: present.map((key) => ({
+      key,
+      label: muscleLabel(key),
+      daysSince: recency[key] ? recency[key].daysSince : null,
     })),
     exercises,
-    intensity: (request && request.intensity) || "normal",
+    intensity: req.intensity || "normal",
   };
 }
