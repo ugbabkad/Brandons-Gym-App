@@ -178,6 +178,15 @@ const Store = {
     return null;
   },
 
+  // Most recent logged instance of any exercise in a muscle group, or null.
+  getLastForGroup(group) {
+    for (let i = this._history.length - 1; i >= 0; i--) {
+      const entry = this._history[i].exercises.find((e) => e.muscleGroup === group);
+      if (entry) return { date: this._history[i].date, ...entry };
+    }
+    return null;
+  },
+
   // Map of muscleGroup -> { lastDate, daysSince } based on any exercise
   // logged in that group. Groups never trained are absent.
   getMuscleGroupRecency() {

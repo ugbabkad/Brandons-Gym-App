@@ -32,7 +32,15 @@
       <input id="auth-password" class="auth-input" type="password" placeholder="Password" autocomplete="current-password" />
       <button id="auth-signin-btn" class="primary-btn">Sign in</button>
       <button id="auth-signup-btn" class="text-btn">First time? Create your account</button>
+      <button id="auth-forgot-btn" class="text-btn">Forgot password?</button>
       <p id="auth-msg" class="auth-msg"></p>
+    </div>
+
+    <div id="reset-screen" class="hidden">
+      <p class="empty-state">Choose a new password.</p>
+      <input id="reset-password" class="auth-input" type="password" placeholder="New password (6+ characters)" autocomplete="new-password" />
+      <button id="reset-save-btn" class="primary-btn">Save password</button>
+      <p id="reset-msg" class="auth-msg"></p>
     </div>
 
     <div id="loading-screen">
@@ -43,6 +51,7 @@
     <div id="start-screen" class="hidden">
       <p class="empty-state">No workout in progress.</p>
       <textarea id="workout-request" class="request-box" rows="2" placeholder="Any requests? e.g. arms are sore, do legs"></textarea>
+      <label class="machines-only-row"><input type="checkbox" id="machines-only"> Machines only (no free weights or cables)</label>
       <button id="warmup-btn" class="secondary-btn warmup-cta">Warm Up first (~10 min)</button>
       <button id="start-workout-btn" class="primary-btn">Start Workout</button>
     </div>

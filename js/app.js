@@ -41,6 +41,8 @@ function renderRequestSummary() {
   const r = currentRequest;
   if (!r || !r.text) return;
   const bits = [];
+  if (r.machinesOnly) bits.push("machines only");
+  if (r.fullBody) bits.push("full body");
   if (r.focus.length) bits.push(`focus: ${r.focus.map(muscleLabel).join(", ")}`);
   if (r.exercises && r.exercises.length) bits.push(`included: ${r.exercises.join(", ")}`);
   if (r.avoid.length) bits.push(`avoiding: ${r.avoid.map(muscleLabel).join(", ")}`);
@@ -81,17 +83,18 @@ function buildExerciseCard(exercise) {
   note.textContent = suggestion.note;
   card.appendChild(note);
 
-  const isBodyweight = exercise.equipment === "bodyweight";
+  const isCardio = exercise.equipment === "cardio";
+  const isBodyweight = exercise.equipment === "bodyweight" || isCardio;
   const setsWrap = document.createElement("div");
   setsWrap.className = "sets-wrap";
   for (let i = 0; i < suggestion.sets; i++) {
     const row = document.createElement("div");
     row.className = isBodyweight ? "set-row bodyweight" : "set-row";
-    const targetLabel = suggestion.targetReps === null ? "AMRAP" : `/ ${suggestion.targetReps}`;
+    const targetLabel = isCardio ? `/ ${suggestion.targetReps} min` : suggestion.targetReps === null ? "AMRAP" : `/ ${suggestion.targetReps}`;
     row.innerHTML = isBodyweight
       ? `
       <span class="set-index">${i + 1}</span>
-      <input type="number" inputmode="numeric" class="reps-input" placeholder="reps" />
+      <input type="number" inputmode="numeric" class="reps-input" placeholder="${isCardio ? "min" : "reps"}" />
       <span class="set-target">${targetLabel}</span>
     `
       : `
@@ -241,6 +244,10 @@ function swapExercise(name) {
 // relevant mobility work) before the routine screen is ever shown.
 async function generateAndStoreRoutine() {
   const request = await resolveWorkoutRequest(el("workout-request") ? el("workout-request").value : "");
+  if (el("machines-only") && el("machines-only").checked) {
+    request.machinesOnly = true;
+    request.avoidEquipment = [...new Set([...(request.avoidEquipment || []), ...MACHINES_ONLY_BLOCKED])];
+  }
   const routine = generateRoutine(request);
   currentRequest = request;
   try { localStorage.setItem("gym.todayRequest", JSON.stringify(request)); } catch (e) {}
@@ -276,7 +283,7 @@ function collectRowsFromDom() {
   const out = [];
   document.querySelectorAll("#exercise-list .exercise-card").forEach((card) => {
     const targetReps = card.dataset.targetReps === "" ? null : Number(card.dataset.targetReps);
-    const isBodyweight = card.dataset.equipment === "bodyweight";
+    const isBodyweight = card.dataset.equipment === "bodyweight" || card.dataset.equipment === "cardio";
     const sets = [];
     card.querySelectorAll(".set-row").forEach((row) => {
       const setNumber = Number(row.dataset.setNumber);
@@ -305,7 +312,7 @@ function syncRow(card, row) {
   const name = card.dataset.exerciseName;
   const setNumber = Number(row.dataset.setNumber);
   const reps = row.querySelector(".reps-input").value;
-  if (card.dataset.equipment === "bodyweight") {
+  if (card.dataset.equipment === "bodyweight" || card.dataset.equipment === "cardio") {
     Store.saveSet(name, setNumber, reps === "" ? null : { reps: Number(reps) });
     return;
   }
@@ -376,7 +383,7 @@ function renderHistory() {
         const hasWeight = ex.sets[0] && Object.prototype.hasOwnProperty.call(ex.sets[0], "weight");
         const setStr = hasWeight
           ? ex.sets.map((s) => `${s.weight}x${s.reps}`).join(", ")
-          : ex.sets.map((s) => `${s.reps} reps`).join(", ");
+          : ex.sets.map((s) => `${s.reps} ${ex.equipment === "cardio" ? "min" : "reps"}`).join(", ");
         const noteStr = ex.note ? `<br><em>Note: ${escapeHtml(ex.note)}</em>` : "";
         return `<p class="history-exercise"><strong>${ex.name}</strong>: ${setStr}${noteStr}</p>`;
       })
@@ -530,6 +537,38 @@ async function bootApp() {
   if (!resumeActiveWorkout()) el("start-screen").classList.remove("hidden");
 }
 
+async function handleForgot() {
+  const email = el("auth-email").value.trim();
+  if (!email) {
+    el("auth-msg").textContent = "Enter your email above, then tap Forgot password.";
+    return;
+  }
+  el("auth-msg").textContent = "Sending reset email…";
+  try {
+    await Cloud.sendPasswordReset(email);
+    el("auth-msg").textContent = "Check your email for a reset link.";
+  } catch (e) {
+    el("auth-msg").textContent = e.message || "Couldn't send the reset email.";
+  }
+}
+
+async function handleSaveNewPassword() {
+  const password = el("reset-password").value;
+  if (password.length < 6) {
+    el("reset-msg").textContent = "Use 6+ characters.";
+    return;
+  }
+  el("reset-msg").textContent = "Saving…";
+  try {
+    await Cloud.updatePassword(password);
+    el("reset-screen").classList.add("hidden");
+    history.replaceState(null, "", location.pathname);
+    await bootApp();
+  } catch (e) {
+    el("reset-msg").textContent = e.message || "Couldn't save the password.";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   registerServiceWorker();
@@ -539,6 +578,15 @@ document.addEventListener("DOMContentLoaded", () => {
   el("sync-status").addEventListener("click", () => Store.retryFailed());
   el("auth-signin-btn").addEventListener("click", () => handleAuth("signin"));
   el("auth-signup-btn").addEventListener("click", () => handleAuth("signup"));
+  el("auth-forgot-btn").addEventListener("click", handleForgot);
+  el("reset-save-btn").addEventListener("click", handleSaveNewPassword);
+  Cloud.onPasswordRecovery(() => {
+    el("auth-screen").classList.add("hidden");
+    el("loading-screen").classList.add("hidden");
+    el("start-screen").classList.add("hidden");
+    el("routine-screen").classList.add("hidden");
+    el("reset-screen").classList.remove("hidden");
+  });
   el("auth-password").addEventListener("keydown", (e) => {
     if (e.key === "Enter") handleAuth("signin");
   });

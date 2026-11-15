@@ -13,7 +13,7 @@ const Cloud = {
 
   init() {
     this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     });
   },
 
@@ -33,6 +33,25 @@ const Cloud = {
     const { data, error } = await this.client.auth.signUp({ email, password });
     if (error) throw error;
     return data.session;
+  },
+
+  // Emails a reset link that returns to this app (the URL must be listed under
+  // Authentication > URL Configuration > Redirect URLs in Supabase).
+  async sendPasswordReset(email) {
+    const redirectTo = location.origin + location.pathname;
+    const { error } = await this.client.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+  },
+
+  async updatePassword(password) {
+    const { error } = await this.client.auth.updateUser({ password });
+    if (error) throw error;
+  },
+
+  onPasswordRecovery(cb) {
+    this.client.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") cb();
+    });
   },
 
   async signOut() {

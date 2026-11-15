@@ -23,7 +23,25 @@ const KETTLEBELL_INCREMENT_LBS = 9;
 // kettlebell bells in kg step 8/12/16/20/24/28/32, so go up one bell (4 kg).
 const KETTLEBELL_INCREMENT_KG = 4;
 
+// Aerobic (zone 2): one steady block, logged in minutes. Start at 30 and add
+// 5 minutes each time the full target was completed, up to 60.
+function suggestNextAerobic(exercise, intensity) {
+  const last = Store.getLastForExercise(exercise.name) || Store.getLastForGroup("aerobic");
+  const prev = last && last.sets && last.sets[0] ? last.sets[0].reps : null;
+  let target = prev ? Math.min(60, prev >= (last.targetReps || 0) ? prev + 5 : prev) : 30;
+  if (!prev) target = 30;
+  if (intensity === "light") target = Math.max(20, target - 10);
+  else if (intensity === "heavy") target = Math.min(60, target + 10);
+  return {
+    sets: 1,
+    targetReps: target,
+    note: `Zone 2: easy enough to hold a conversation. Aim for ${target} min${prev ? ` (last time ${prev})` : ""}. Log minutes.`,
+    isFirstTime: !prev,
+  };
+}
+
 function suggestNext(exercise, intensity) {
+  if (exercise.equipment === "cardio") return suggestNextAerobic(exercise, intensity);
   const s = suggestNextBase(exercise);
   if (!s || !s.sets) return s;
   // Pre-workout request: "light" = one fewer set and no weight increase; "heavy" = one extra set.

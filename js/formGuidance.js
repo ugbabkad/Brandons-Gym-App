@@ -2451,6 +2451,14 @@ const FORM_GUIDANCE_DB = {
     cue: "Sit tall with a slight forward lean at the start. Pull the handle to your torso, squeezing your shoulder blades, then let your torso follow forward again with control on the return.",
     mistakes: ["Leaning way back and using body momentum to move the weight", "Rounding the lower back at the start of each rep", "Shrugging the shoulders up instead of pulling with the mid-back"],
   },
+  "Landmine Row": {
+    cue: "Anchor one end of the barbell in a landmine attachment or corner and load plates on the free end. Straddle the bar, hinge at the hips with a flat back, and pull the loaded end toward your lower chest, squeezing your shoulder blades together. Lower under control.",
+    mistakes: ["Rounding the lower back instead of holding the hinge", "Standing up through the rep and using momentum", "Shrugging the shoulders instead of pulling with the back"],
+  },
+  "Landmine Press": {
+    cue: "Hold the loaded end of the bar at your shoulder with one or both hands, feet staggered or shoulder-width, ribs down. Press up and slightly forward along the arc of the bar until your arm is straight, then lower with control.",
+    mistakes: ["Leaning back and turning it into a lower-back arch", "Letting the bar drift away from the body at the bottom", "Shrugging the shoulder up instead of pressing"],
+  },
   "T-Bar Row": {
     family: "rowSideProfile",
     cue: "Hinge at the hips with a flat back. Pull the handle up to your torso, squeezing your shoulder blades together, then lower with control.",

@@ -592,6 +592,15 @@ main {
   resize: none;
 }
 
+.machines-only-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+.machines-only-row input { width: 20px; height: 20px; }
+
 .coach-box { margin-top: 10px; }
 .coach-reply { color: var(--text); }
 

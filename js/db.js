@@ -30,6 +30,7 @@ const EXERCISE_DB = [
   { name: "Pull-Up", muscleGroup: "back", equipment: "bodyweight", type: "compound" },
   { name: "Assisted Pull-Up Machine", muscleGroup: "back", equipment: "machine", type: "compound", weightMeaning: "assistance" },
   { name: "T-Bar Row", muscleGroup: "back", equipment: "barbell", type: "compound" },
+  { name: "Landmine Row", muscleGroup: "back", equipment: "barbell", type: "compound" },
   { name: "Single-Arm Dumbbell Row", muscleGroup: "back", equipment: "dumbbell", type: "compound" },
   { name: "Chin-Up", muscleGroup: "back", equipment: "bodyweight", type: "compound" },
   { name: "Inverted Row", muscleGroup: "back", equipment: "bodyweight", type: "compound" },
@@ -41,6 +42,7 @@ const EXERCISE_DB = [
 
   // Shoulders
   { name: "Overhead Barbell Press", muscleGroup: "shoulders", equipment: "barbell", type: "compound" },
+  { name: "Landmine Press", muscleGroup: "shoulders", equipment: "barbell", type: "compound" },
   { name: "Seated Dumbbell Shoulder Press", muscleGroup: "shoulders", equipment: "dumbbell", type: "compound" },
   { name: "Lateral Raise", muscleGroup: "shoulders", equipment: "dumbbell", type: "isolation" },
   { name: "Cable Lateral Raise", muscleGroup: "shoulders", equipment: "cable", type: "isolation" },
@@ -122,6 +124,13 @@ const EXERCISE_DB = [
   { name: "Seated Calf Raise", muscleGroup: "calves", equipment: "machine", type: "isolation" },
   { name: "Single-Leg Calf Raise", muscleGroup: "calves", equipment: "bodyweight", type: "isolation" },
   { name: "Dumbbell Calf Raise", muscleGroup: "calves", equipment: "dumbbell", type: "isolation" },
+  // Aerobic (zone 2): one block, logged as minutes in the "reps" box.
+  { name: "Incline Treadmill Walk", muscleGroup: "aerobic", equipment: "cardio", type: "aerobic" },
+  { name: "Easy Run", muscleGroup: "aerobic", equipment: "cardio", type: "aerobic" },
+  { name: "Stationary Bike", muscleGroup: "aerobic", equipment: "cardio", type: "aerobic" },
+  { name: "Rowing Machine", muscleGroup: "aerobic", equipment: "cardio", type: "aerobic" },
+  { name: "Elliptical", muscleGroup: "aerobic", equipment: "cardio", type: "aerobic" },
+  { name: "Stair Climber", muscleGroup: "aerobic", equipment: "cardio", type: "aerobic" },
 ];
 
 // Display order + friendly labels for muscle groups, used across the UI.
@@ -135,4 +144,5 @@ const MUSCLE_GROUPS = [
   { key: "triceps", label: "Triceps" },
   { key: "core", label: "Core" },
   { key: "calves", label: "Calves" },
+  { key: "aerobic", label: "Aerobic" },
 ];

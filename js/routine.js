@@ -14,6 +14,20 @@ const WORKOUT_DAYS = [
   { label: "Chest + Triceps", groups: { chest: 3, triceps: 2, shoulders: 1 } },
   { label: "Legs", groups: { quads: 2, hamstrings_glutes: 2, calves: 1, core: 1 } },
 ];
+// The dedicated weekly aerobic slot: if no aerobic session in this many days,
+// the next un-requested workout is aerobic.
+const AEROBIC_EVERY_DAYS = 7;
+const AEROBIC_DAY = { label: "Aerobic", groups: { aerobic: 1 } };
+// Opt-in via the request box ("full body"): one big lift per major pattern
+// (squat, hinge, press, row, overhead press). Not part of the regular rotation.
+const FULL_BODY_DAY = {
+  label: "Full Body",
+  groups: { quads: 1, hamstrings_glutes: 1, chest: 1, back: 1, shoulders: 1 },
+};
+// Equipment blocked by the "Machines only" checkbox. Machines, cardio and
+// bodyweight stay allowed (bodyweight only fills in where a group has no machine).
+const MACHINES_ONLY_BLOCKED = ["barbell", "dumbbell", "cable", "kettlebell"];
+const FULL_BODY_WORDS =/\b(full|whole|total)[- ]body\b/;
 const MIN_RECOVERY_DAYS = 2; // don't re-hit a group trained more recently than this...
 
 function shuffle(arr) {
@@ -62,6 +76,7 @@ const REQUEST_GROUP_WORDS = [
   [/\b(back|lats?)\b/, () => ["back"]],
   [/\b(shoulders?|delts?)\b/, () => ["shoulders"]],
   [/\b(abs?|core)\b/, () => ["core"]],
+  [/\b(aerobic|cardio|zone 2|zone two|run|running|conditioning)\b/, () => ["aerobic"]],
   [/\b(knees?)\b/, () => ["quads", "hamstrings_glutes"]],
   [/\b(elbows?)\b/, () => ["biceps", "triceps"]],
   [/\b(push)\b/, () => ["chest", "shoulders", "triceps"]],
@@ -88,7 +103,7 @@ function parseWorkoutRequest(text) {
 // Returns { primaryGroups: [{key,label,daysSince}], exercises: [{name, muscleGroup, equipment, type}] }
 // Asks Claude (via the Supabase "parse-request" edge function) to read the
 // request; falls back to the local keyword parser if offline or unavailable.
-const EQUIPMENT_TYPES = ["barbell", "dumbbell", "machine", "cable", "bodyweight", "kettlebell"];
+const EQUIPMENT_TYPES = ["barbell", "dumbbell", "machine", "cable", "bodyweight", "kettlebell"]; // cardio is never avoided
 const EQUIPMENT_WORDS = [
   ["barbell", /\bbarbells?\b/],
   ["dumbbell", /\b(dumbbells?|db|dbs)\b/],
@@ -207,7 +222,7 @@ function parseNamedExercises(text) {
 
 // Always resolves to { focus, avoid, avoidEquipment, exerciseCount, intensity, text }.
 async function resolveWorkoutRequest(text) {
-  const empty = { focus: [], avoid: [], avoidEquipment: [], exerciseCount: null, intensity: "normal", exercises: [], text: "" };
+  const empty = { focus: [], avoid: [], avoidEquipment: [], exerciseCount: null, intensity: "normal", exercises: [], fullBody: false, text: "" };
   if (!String(text || "").trim()) return empty;
   const local = parseRequestModifiers(text);
   let base = null;
@@ -225,7 +240,8 @@ async function resolveWorkoutRequest(text) {
   const exerciseCount = Number.isInteger(n) && n >= 3 && n <= 8 ? n : local.exerciseCount;
   const intensity = ["light", "normal", "heavy"].includes(base.intensity) ? base.intensity : local.intensity;
   const exercises = parseNamedExercises(text);
-  return { focus: base.focus, avoid: base.avoid, avoidEquipment, exerciseCount, intensity, exercises, text: String(text).trim() };
+  const fullBody = FULL_BODY_WORDS.test(String(text).toLowerCase());
+  return { focus: base.focus, avoid: base.avoid, avoidEquipment, exerciseCount, intensity, exercises, fullBody, text: String(text).trim() };
 }
 
 // Splits `n` slots across weighted groups (largest remainder, ties random).
@@ -265,21 +281,32 @@ function chooseWorkoutDay(recency, avoid) {
   return (recovered.length ? recovered : pool.length ? pool : scored).sort((a, b) => b.score - a.score)[0].day;
 }
 
+function aerobicDue(recency) {
+  const r = recency.aerobic;
+  return !r || r.daysSince >= AEROBIC_EVERY_DAYS;
+}
+
 // request: { focus, avoid, avoidEquipment, exerciseCount, intensity, exercises }.
 function generateRoutine(request) {
   const req = request || {};
   const avoid = req.avoid || [];
   const avoidEquipment = req.avoidEquipment || [];
-  const named = (req.exercises || []).map(exerciseMeta).filter(Boolean);
-  const targetCount = Math.max(req.exerciseCount || TARGET_EXERCISE_COUNT, named.length);
+  const named = (req.exercises || [])
+    .map(exerciseMeta)
+    .filter((e) => e && !(req.machinesOnly && avoidEquipment.includes(e.equipment)));
+  let targetCount = Math.max(req.exerciseCount || TARGET_EXERCISE_COUNT, named.length);
   const recency = Store.getMuscleGroupRecency();
 
   // Groups the lifter asked for, directly or by naming an exercise.
   const focus = [...new Set([...(req.focus || []), ...named.map((e) => e.muscleGroup)])].filter((k) => !avoid.includes(k));
   let weights;
   let label;
-  if (focus.length) {
-    const home = WORKOUT_DAYS.filter((d) => focus.every((k) => k in d.groups));
+  if (req.fullBody) {
+    weights = { ...FULL_BODY_DAY.groups };
+    label = FULL_BODY_DAY.label;
+    for (const k of focus) if (k in weights) weights[k] = 2;
+  } else if (focus.length) {
+    const home = [...WORKOUT_DAYS, AEROBIC_DAY].filter((d) => focus.every((k) => k in d.groups));
     if (home.length) {
       // Everything asked for lives in one regular combo: run that whole day.
       weights = { ...home[0].groups };
@@ -289,12 +316,25 @@ function generateRoutine(request) {
       weights = Object.fromEntries(focus.map((k) => [k, 2]));
       label = focus.map(muscleLabel).join(" + ");
     }
+  } else if (aerobicDue(recency) && !avoid.includes("aerobic")) {
+    weights = { ...AEROBIC_DAY.groups };
+    label = AEROBIC_DAY.label;
   } else {
     const day = chooseWorkoutDay(recency, avoid);
     weights = { ...day.groups };
     label = day.label;
   }
   for (const k of avoid) delete weights[k];
+  // Machines only: drop groups with nothing left to pick (e.g. biceps) so their
+  // slots go to groups that do have machines.
+  if (req.machinesOnly) {
+    for (const k of Object.keys(weights)) {
+      if (!pickExercise(k, "compound", new Set(), avoidEquipment)) delete weights[k];
+    }
+    if (!Object.keys(weights).length) weights = { ...FULL_BODY_DAY.groups };
+  }
+  // An aerobic session is a single steady block, not a list of lifts.
+  if (Object.keys(weights).length === 1 && weights.aerobic) targetCount = Math.max(1, named.length);
 
   const slots = allocateSlots(weights, targetCount);
   const exercises = [...named];
@@ -305,8 +345,9 @@ function generateRoutine(request) {
   for (const k of groupKeys) {
     const total = slots[k];
     for (let j = 0; j < total; j++) {
-      const prefer = k !== "core" && j < Math.round(total * 0.67) ? "compound" : "isolation";
-      const ex = pickExercise(k, prefer, usedNames, avoidEquipment) || pickExercise(k, prefer, usedNames, []);
+      const prefer = k === "aerobic" ? "aerobic" : k !== "core" && j < Math.round(total * 0.67) ? "compound" : "isolation";
+      const ex = pickExercise(k, prefer, usedNames, avoidEquipment) ||
+        (req.machinesOnly ? null : pickExercise(k, prefer, usedNames, []));
       if (ex) {
         exercises.push(ex);
         usedNames.add(ex.name);
