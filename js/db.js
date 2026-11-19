@@ -20,12 +20,13 @@ const EXERCISE_DB = [
   { name: "Dumbbell Bench Press", muscleGroup: "chest", equipment: "dumbbell", type: "compound" },
   { name: "Incline Barbell Bench Press", muscleGroup: "chest", equipment: "barbell", type: "compound" },
   { name: "Pec Deck", muscleGroup: "chest", equipment: "machine", type: "isolation" },
+  { name: "Incline Chest Press Machine", muscleGroup: "chest", equipment: "machine", type: "compound" },
   { name: "Push-Up", muscleGroup: "chest", equipment: "bodyweight", type: "compound" },
   { name: "Kettlebell Floor Press", muscleGroup: "chest", equipment: "kettlebell", type: "compound" },
 
   // Back
   { name: "Barbell Row", muscleGroup: "back", equipment: "barbell", type: "compound" },
-  { name: "Lat Pulldown", muscleGroup: "back", equipment: "cable", type: "compound" },
+  { name: "Lat Pulldown", muscleGroup: "back", equipment: "machine", type: "compound" },
   { name: "Seated Cable Row", muscleGroup: "back", equipment: "cable", type: "compound" },
   { name: "Pull-Up", muscleGroup: "back", equipment: "bodyweight", type: "compound" },
   { name: "Assisted Pull-Up Machine", muscleGroup: "back", equipment: "machine", type: "compound", weightMeaning: "assistance" },
@@ -37,6 +38,7 @@ const EXERCISE_DB = [
   { name: "Chest-Supported Dumbbell Row", muscleGroup: "back", equipment: "dumbbell", type: "compound" },
   { name: "Straight-Arm Pulldown", muscleGroup: "back", equipment: "cable", type: "isolation" },
   { name: "Machine Row", muscleGroup: "back", equipment: "machine", type: "compound" },
+  { name: "Mid Row Machine", muscleGroup: "back", equipment: "machine", type: "compound" },
   { name: "Kettlebell Bent-Over Row", muscleGroup: "back", equipment: "kettlebell", type: "compound" },
   { name: "Back Extension", muscleGroup: "back", equipment: "bodyweight", type: "isolation" },
 
@@ -52,6 +54,7 @@ const EXERCISE_DB = [
   { name: "Machine Shoulder Press", muscleGroup: "shoulders", equipment: "machine", type: "compound" },
   { name: "Pike Push-Up", muscleGroup: "shoulders", equipment: "bodyweight", type: "compound" },
   { name: "Reverse Pec Deck", muscleGroup: "shoulders", equipment: "machine", type: "isolation" },
+  { name: "Lateral Raise Machine", muscleGroup: "shoulders", equipment: "machine", type: "isolation" },
   { name: "Dumbbell Front Raise", muscleGroup: "shoulders", equipment: "dumbbell", type: "isolation" },
   { name: "Kettlebell Overhead Press", muscleGroup: "shoulders", equipment: "kettlebell", type: "compound" },
   { name: "Kettlebell Clean and Press", muscleGroup: "shoulders", equipment: "kettlebell", type: "compound" },
@@ -64,21 +67,21 @@ const EXERCISE_DB = [
   { name: "Leg Extension", muscleGroup: "quads", equipment: "machine", type: "isolation" },
   { name: "Front Squat", muscleGroup: "quads", equipment: "barbell", type: "compound" },
   { name: "Goblet Squat", muscleGroup: "quads", equipment: "kettlebell", type: "compound", unit: "kg" },
-  { name: "Hack Squat", muscleGroup: "quads", equipment: "machine", type: "compound" },
   { name: "Dumbbell Walking Lunge", muscleGroup: "quads", equipment: "dumbbell", type: "compound" },
   { name: "Reverse Lunge", muscleGroup: "quads", equipment: "bodyweight", type: "compound" },
   { name: "Step-Up", muscleGroup: "quads", equipment: "dumbbell", type: "compound" },
 
   // Hamstrings / Glutes
   { name: "Romanian Deadlift", muscleGroup: "hamstrings_glutes", equipment: "barbell", type: "compound" },
-  { name: "Lying Leg Curl", muscleGroup: "hamstrings_glutes", equipment: "machine", type: "isolation" },
   { name: "Hip Thrust", muscleGroup: "hamstrings_glutes", equipment: "barbell", type: "compound" },
   { name: "Cable Pull-Through", muscleGroup: "hamstrings_glutes", equipment: "cable", type: "compound" },
-  { name: "Glute Bridge Machine", muscleGroup: "hamstrings_glutes", equipment: "machine", type: "isolation" },
   { name: "Conventional Deadlift", muscleGroup: "hamstrings_glutes", equipment: "barbell", type: "compound" },
   { name: "Dumbbell Romanian Deadlift", muscleGroup: "hamstrings_glutes", equipment: "dumbbell", type: "compound" },
   { name: "Good Morning", muscleGroup: "hamstrings_glutes", equipment: "barbell", type: "compound" },
   { name: "Seated Leg Curl", muscleGroup: "hamstrings_glutes", equipment: "machine", type: "isolation" },
+  { name: "Hip Adduction Machine", muscleGroup: "hamstrings_glutes", equipment: "machine", type: "isolation" },
+  { name: "Hip Abduction Machine", muscleGroup: "hamstrings_glutes", equipment: "machine", type: "isolation" },
+  { name: "Glute Master", muscleGroup: "hamstrings_glutes", equipment: "machine", type: "isolation" },
   { name: "Kettlebell Swing", muscleGroup: "hamstrings_glutes", equipment: "kettlebell", type: "compound" },
   { name: "Kettlebell Deadlift", muscleGroup: "hamstrings_glutes", equipment: "kettlebell", type: "compound" },
   { name: "Single-Leg Kettlebell RDL", muscleGroup: "hamstrings_glutes", equipment: "kettlebell", type: "compound" },
@@ -94,6 +97,7 @@ const EXERCISE_DB = [
   { name: "Preacher Curl", muscleGroup: "biceps", equipment: "barbell", type: "isolation" },
   { name: "Incline Dumbbell Curl", muscleGroup: "biceps", equipment: "dumbbell", type: "isolation" },
   { name: "Concentration Curl", muscleGroup: "biceps", equipment: "dumbbell", type: "isolation" },
+  { name: "Biceps Curl Machine", muscleGroup: "biceps", equipment: "machine", type: "isolation" },
 
   // Triceps
   { name: "Cable Triceps Pushdown", muscleGroup: "triceps", equipment: "cable", type: "isolation" },
@@ -105,6 +109,8 @@ const EXERCISE_DB = [
   { name: "Bench Dip", muscleGroup: "triceps", equipment: "bodyweight", type: "compound" },
   { name: "Diamond Push-Up", muscleGroup: "triceps", equipment: "bodyweight", type: "compound" },
   { name: "Kettlebell Overhead Triceps Extension", muscleGroup: "triceps", equipment: "kettlebell", type: "isolation" },
+  { name: "Triceps Extension Machine", muscleGroup: "triceps", equipment: "machine", type: "isolation" },
+  { name: "Seated Dip Machine", muscleGroup: "triceps", equipment: "machine", type: "compound" },
 
   // Core
   { name: "Cable Crunch", muscleGroup: "core", equipment: "cable", type: "isolation" },
@@ -118,10 +124,9 @@ const EXERCISE_DB = [
   { name: "Pallof Press", muscleGroup: "core", equipment: "cable", type: "isolation" },
   { name: "Kettlebell Russian Twist", muscleGroup: "core", equipment: "kettlebell", type: "isolation" },
   { name: "Kettlebell Turkish Get-Up", muscleGroup: "core", equipment: "kettlebell", type: "compound" },
+  { name: "Ab Crunch Machine", muscleGroup: "core", equipment: "machine", type: "isolation" },
 
   // Calves
-  { name: "Standing Calf Raise", muscleGroup: "calves", equipment: "machine", type: "isolation" },
-  { name: "Seated Calf Raise", muscleGroup: "calves", equipment: "machine", type: "isolation" },
   { name: "Single-Leg Calf Raise", muscleGroup: "calves", equipment: "bodyweight", type: "isolation" },
   { name: "Dumbbell Calf Raise", muscleGroup: "calves", equipment: "dumbbell", type: "isolation" },
   // Aerobic (zone 2): one block, logged as minutes in the "reps" box.

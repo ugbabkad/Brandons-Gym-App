@@ -23,7 +23,7 @@ to load and save your workouts.
 ## What's built
 - `js/db.js` — exercise database (full gym: barbell/dumbbell/machine/cable/
   bodyweight/kettlebell/assisted-machine), tagged by muscle group and
-  compound/isolation. 96 exercises total.
+  compound/isolation. 109 exercises total.
 - `js/cloud.js` — Supabase connection and sign-in. The publishable key in it
   is meant to be public; row-level security in the database (each row is
   owned by the signed-in user) is what protects the data.

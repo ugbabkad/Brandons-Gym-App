@@ -2539,11 +2539,6 @@ const FORM_GUIDANCE_DB = {
     cue: "Standing with the bar at your thighs, push your hips straight back while keeping a soft bend in the knees and the bar close to your legs, until you feel a stretch in your hamstrings.",
     mistakes: ["Rounding the lower back instead of keeping it flat", "Bending the knees too much and turning it into a squat", "Letting the bar drift away from your legs instead of staying close"],
   },
-  "Lying Leg Curl": {
-    family: "legCurlProneSide",
-    cue: "Lying face down with the pad against your ankles, curl your heels toward your glutes, then lower with control back to the start.",
-    mistakes: ["Hips lifting off the bench to help complete the rep", "Using a fast, jerky tempo instead of a controlled one", "Not going through the full range of motion"],
-  },
   "Hip Thrust": {
     family: "hipThrustSupineSide",
     cue: "Upper back against a bench, feet flat on the floor. Drive your hips up until your body forms a straight line from shoulders to knees, squeezing your glutes at the top.",
@@ -2553,11 +2548,6 @@ const FORM_GUIDANCE_DB = {
     family: "hipHingeStandingSide",
     cue: "Facing away from the cable with the rope between your legs, hinge at the hips with a flat back, then drive your hips forward to standing, squeezing your glutes.",
     mistakes: ["Rounding the lower back at the bottom of the hinge", "Squatting the weight up with the knees instead of hinging at the hips", "Not finishing with a full hip extension / glute squeeze at the top"],
-  },
-  "Glute Bridge Machine": {
-    family: "hipThrustSupineSide",
-    cue: "Upper back supported, feet flat on the platform. Drive your hips up until your body forms a straight line, squeezing your glutes at the top, then lower with control.",
-    mistakes: ["Overarching the lower back instead of squeezing the glutes", "Rushing through reps instead of pausing briefly at the top", "Pushing through the toes instead of the heels"],
   },
   "Barbell Curl": {
     family: "curlStandingFront",
@@ -2618,16 +2608,6 @@ const FORM_GUIDANCE_DB = {
     family: "plankSideHold",
     cue: "Forearms and toes on the floor, body in a straight line from head to heels. Brace your core and hold the position without sagging or piking your hips.",
     mistakes: ["Hips sagging toward the floor over the course of the hold", "Hips piking up too high instead of staying in line", "Holding your breath instead of breathing steadily throughout"],
-  },
-  "Standing Calf Raise": {
-    family: "calfRaiseStandingSide",
-    cue: "Standing with the balls of your feet on a platform, rise up onto your toes as high as you can, pause briefly, then lower until you feel a stretch in your calves.",
-    mistakes: ["Bouncing at the bottom instead of a controlled stretch", "Only using a partial range of motion instead of full stretch to full raise", "Rushing through reps instead of pausing at the top"],
-  },
-  "Seated Calf Raise": {
-    family: "calfRaiseSeatedSide",
-    cue: "Seated with the pad on your thighs and balls of your feet on the platform, rise up onto your toes, pause, then lower until you feel a stretch.",
-    mistakes: ["Bouncing at the bottom instead of a controlled stretch", "Only using a partial range of motion", "Rushing through reps instead of pausing at the top of each one"],
   },
 
   // ---- Added in the exercise-library expansion (no `family` = text-only guidance, no diagram)
@@ -2735,11 +2715,6 @@ const FORM_GUIDANCE_DB = {
     family: "squatSideProfile",
     cue: "Hold the kettlebell by the horns against your chest. Sit down between your knees with your chest up and elbows inside the knees, then drive through your whole foot to stand.",
     mistakes: ["Letting the chest fall forward as you descend", "Heels lifting off the floor", "Knees caving inward on the way up"],
-  },
-  "Hack Squat": {
-    family: "hackSquatSide",
-    cue: "Place your shoulders under the pads with your feet forward on the platform. Lower until your thighs are at least parallel to the platform, then push through your whole foot to stand.",
-    mistakes: ["Feet placed so far forward that the knees never bend", "Lifting the heels at the bottom", "Locking the knees hard at the top"],
   },
   "Dumbbell Walking Lunge": {
     family: "lungeSide",
